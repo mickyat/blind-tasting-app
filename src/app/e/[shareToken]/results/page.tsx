@@ -19,10 +19,16 @@ export default async function ResultsPage(props: PageProps<'/e/[shareToken]/resu
     )
   }
 
-  const [{ data: items }, { data: parameters }] = await Promise.all([
+  const [{ data: items }, { data: categories }] = await Promise.all([
     supabase.from('item').select('*').eq('event_id', event.id).order('sort_order'),
-    supabase.from('parameter').select('*').eq('event_id', event.id).order('sort_order'),
+    supabase.from('category').select('*').eq('event_id', event.id).order('sort_order'),
   ])
+
+  const categoryIds = (categories ?? []).map((c) => c.id)
+  const { data: parameters } =
+    categoryIds.length > 0
+      ? await supabase.from('parameter').select('*').in('category_id', categoryIds).order('sort_order')
+      : { data: [] }
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
@@ -30,7 +36,12 @@ export default async function ResultsPage(props: PageProps<'/e/[shareToken]/resu
         <h1 className="text-xl font-bold">{event.title}</h1>
         <p className="text-xs text-zinc-500">תוצאות</p>
       </header>
-      <ResultsView event={event} items={items ?? []} parameters={parameters ?? []} />
+      <ResultsView
+        event={event}
+        items={items ?? []}
+        categories={categories ?? []}
+        parameters={parameters ?? []}
+      />
     </main>
   )
 }

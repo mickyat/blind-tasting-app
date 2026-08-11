@@ -3,16 +3,24 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ResultsVisibility } from '@/lib/types'
 
+interface ParameterInput {
+  name: string
+  weight: number
+  scaleMin: number
+  scaleMax: number
+}
+
+interface CategoryInput {
+  name: string
+  weight: number
+  parameters: ParameterInput[]
+}
+
 interface CreateEventInput {
   title: string
   resultsVisibility: ResultsVisibility
   items: string[]
-  parameters: {
-    name: string
-    weight: number
-    scaleMin: number
-    scaleMax: number
-  }[]
+  categories: CategoryInput[]
 }
 
 export async function createEvent(input: CreateEventInput) {
@@ -22,15 +30,29 @@ export async function createEvent(input: CreateEventInput) {
   const items = input.items.map((s) => s.trim()).filter(Boolean)
   if (items.length < 2) return { error: 'צריך לפחות שני פריטים להטעימה' }
 
-  const parameters = input.parameters
-    .map((p) => ({ ...p, name: p.name.trim() }))
-    .filter((p) => p.name)
-  if (parameters.length === 0) return { error: 'צריך לפחות פרמטר אחד לניקוד' }
+  const categories = input.categories
+    .map((c) => ({
+      ...c,
+      name: c.name.trim(),
+      parameters: c.parameters.map((p) => ({ ...p, name: p.name.trim() })).filter((p) => p.name),
+    }))
+    .filter((c) => c.name)
 
-  for (const p of parameters) {
-    if (!(p.weight > 0)) return { error: `משקל לא תקין עבור "${p.name}"` }
-    if (!(Number.isFinite(p.scaleMin) && Number.isFinite(p.scaleMax)) || p.scaleMax <= p.scaleMin) {
-      return { error: `טווח סולם לא תקין עבור "${p.name}"` }
+  if (categories.length === 0) return { error: 'צריך לפחות קטגוריה אחת' }
+
+  for (const c of categories) {
+    if (!(c.weight > 0)) return { error: `משקל לא תקין עבור קטגוריה "${c.name}"` }
+    if (c.parameters.length === 0) {
+      return { error: `צריך לפחות תת-שאלה אחת בקטגוריה "${c.name}"` }
+    }
+    for (const p of c.parameters) {
+      if (!(p.weight > 0)) return { error: `משקל לא תקין עבור "${p.name}"` }
+      if (
+        !(Number.isFinite(p.scaleMin) && Number.isFinite(p.scaleMax)) ||
+        p.scaleMax <= p.scaleMin
+      ) {
+        return { error: `טווח סולם לא תקין עבור "${p.name}"` }
+      }
     }
   }
 
@@ -65,19 +87,38 @@ export async function createEvent(input: CreateEventInput) {
     return { error: 'שגיאה בהוספת הפריטים, נסה שוב' }
   }
 
-  const { error: paramsError } = await supabase.from('parameter').insert(
-    parameters.map((p, i) => ({
-      event_id: event.id,
+  const { data: categoryRows, error: categoriesError } = await supabase
+    .from('category')
+    .insert(
+      categories.map((c, i) => ({
+        event_id: event.id,
+        name: c.name,
+        weight: c.weight,
+        sort_order: i,
+      }))
+    )
+    .select()
+
+  if (categoriesError || !categoryRows) {
+    await supabase.from('event').delete().eq('id', event.id)
+    return { error: 'שגיאה בהוספת הקטגוריות, נסה שוב' }
+  }
+
+  const parameterRows = categories.flatMap((c, i) =>
+    c.parameters.map((p, j) => ({
+      category_id: categoryRows[i].id,
       name: p.name,
       weight: p.weight,
       scale_min: p.scaleMin,
       scale_max: p.scaleMax,
-      sort_order: i,
+      sort_order: j,
     }))
   )
+
+  const { error: paramsError } = await supabase.from('parameter').insert(parameterRows)
   if (paramsError) {
     await supabase.from('event').delete().eq('id', event.id)
-    return { error: 'שגיאה בהוספת הפרמטרים, נסה שוב' }
+    return { error: 'שגיאה בהוספת השאלות, נסה שוב' }
   }
 
   return {

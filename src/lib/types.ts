@@ -16,9 +16,17 @@ export interface ItemRow {
   sort_order: number
 }
 
-export interface ParameterRow {
+export interface CategoryRow {
   id: string
   event_id: string
+  name: string
+  weight: number
+  sort_order: number
+}
+
+export interface ParameterRow {
+  id: string
+  category_id: string
   name: string
   weight: number
   scale_min: number

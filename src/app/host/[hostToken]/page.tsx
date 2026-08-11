@@ -20,11 +20,17 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
     )
   }
 
-  const [{ data: event }, { data: items }, { data: parameters }] = await Promise.all([
+  const [{ data: event }, { data: items }, { data: categories }] = await Promise.all([
     supabase.from('event').select('*').eq('id', admin.event_id).single(),
     supabase.from('item').select('*').eq('event_id', admin.event_id).order('sort_order'),
-    supabase.from('parameter').select('*').eq('event_id', admin.event_id).order('sort_order'),
+    supabase.from('category').select('*').eq('event_id', admin.event_id).order('sort_order'),
   ])
+
+  const categoryIds = (categories ?? []).map((c) => c.id)
+  const { data: parameters } =
+    categoryIds.length > 0
+      ? await supabase.from('parameter').select('*').in('category_id', categoryIds)
+      : { data: [] }
 
   if (!event) {
     return (

@@ -12,6 +12,20 @@ interface ParameterDraft {
   scaleMax: number
 }
 
+interface CategoryDraft {
+  name: string
+  weight: number
+  parameters: ParameterDraft[]
+}
+
+function emptyParameter(): ParameterDraft {
+  return { name: '', weight: 5, scaleMin: 1, scaleMax: 5 }
+}
+
+function emptyCategory(): CategoryDraft {
+  return { name: '', weight: 5, parameters: [emptyParameter()] }
+}
+
 const VISIBILITY_OPTIONS: { value: ResultsVisibility; label: string; hint: string }[] = [
   { value: 'manual', label: 'ידני', hint: 'התוצאות ייחשפו רק כשתלחץ על "הצג תוצאות"' },
   { value: 'after_all_done', label: 'אחרי שכולם סיימו', hint: 'התוצאות ייחשפו אוטומטית כשכל המשתתפים דירגו הכול' },
@@ -22,9 +36,7 @@ export default function CreateEventForm() {
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [items, setItems] = useState(['', ''])
-  const [parameters, setParameters] = useState<ParameterDraft[]>([
-    { name: '', weight: 5, scaleMin: 1, scaleMax: 5 },
-  ])
+  const [categories, setCategories] = useState<CategoryDraft[]>([emptyCategory()])
   const [visibility, setVisibility] = useState<ResultsVisibility>('manual')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -39,14 +51,36 @@ export default function CreateEventForm() {
     setItems((prev) => prev.filter((_, idx) => idx !== i))
   }
 
-  function updateParameter(i: number, patch: Partial<ParameterDraft>) {
-    setParameters((prev) => prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p)))
+  function updateCategory(ci: number, patch: Partial<CategoryDraft>) {
+    setCategories((prev) => prev.map((c, idx) => (idx === ci ? { ...c, ...patch } : c)))
   }
-  function addParameter() {
-    setParameters((prev) => [...prev, { name: '', weight: 5, scaleMin: 1, scaleMax: 5 }])
+  function addCategory() {
+    setCategories((prev) => [...prev, emptyCategory()])
   }
-  function removeParameter(i: number) {
-    setParameters((prev) => prev.filter((_, idx) => idx !== i))
+  function removeCategory(ci: number) {
+    setCategories((prev) => prev.filter((_, idx) => idx !== ci))
+  }
+
+  function updateParameter(ci: number, pi: number, patch: Partial<ParameterDraft>) {
+    setCategories((prev) =>
+      prev.map((c, idx) =>
+        idx === ci
+          ? { ...c, parameters: c.parameters.map((p, j) => (j === pi ? { ...p, ...patch } : p)) }
+          : c
+      )
+    )
+  }
+  function addParameter(ci: number) {
+    setCategories((prev) =>
+      prev.map((c, idx) => (idx === ci ? { ...c, parameters: [...c.parameters, emptyParameter()] } : c))
+    )
+  }
+  function removeParameter(ci: number, pi: number) {
+    setCategories((prev) =>
+      prev.map((c, idx) =>
+        idx === ci ? { ...c, parameters: c.parameters.filter((_, j) => j !== pi) } : c
+      )
+    )
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -57,7 +91,7 @@ export default function CreateEventForm() {
         title,
         resultsVisibility: visibility,
         items,
-        parameters,
+        categories,
       })
       if ('error' in result && result.error) {
         setError(result.error)
@@ -121,68 +155,113 @@ export default function CreateEventForm() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-zinc-700">פרמטרים לניקוד</h2>
+        <h2 className="text-sm font-medium text-zinc-700">קטגוריות ותת-שאלות</h2>
         <div className="flex flex-col gap-4">
-          {parameters.map((p, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4">
-              <div className="flex items-center gap-2">
-                <input
-                  value={p.name}
-                  onChange={(e) => updateParameter(i, { name: e.target.value })}
-                  placeholder={`פרמטר ${i + 1} (למשל: עסיסיות)`}
-                  className="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                  required
-                />
+          {categories.map((category, ci) => (
+            <div key={ci} className="flex flex-col gap-3 rounded-xl border border-zinc-400 bg-white p-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={category.name}
+                    onChange={(e) => updateCategory(ci, { name: e.target.value })}
+                    placeholder={`קטגוריה ${ci + 1} (למשל: אף)`}
+                    className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base font-medium focus:border-zinc-500 focus:outline-none"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeCategory(ci)}
+                    disabled={categories.length <= 1}
+                    aria-label="הסר קטגוריה"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-zinc-500">
+                  משקל קטגוריה
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={category.weight}
+                    onChange={(e) => updateCategory(ci, { weight: Number(e.target.value) })}
+                    className="w-20 shrink-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                  />
+                </label>
+              </div>
+
+              <div className="flex flex-col gap-2 border-r-2 border-zinc-200 pr-3">
+                {category.parameters.map((p, pi) => (
+                  <div key={pi} className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={p.name}
+                        onChange={(e) => updateParameter(ci, pi, { name: e.target.value })}
+                        placeholder={`תת-שאלה ${pi + 1} (למשל: עוצמה)`}
+                        className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeParameter(ci, pi)}
+                        disabled={category.parameters.length <= 1}
+                        aria-label="הסר תת-שאלה"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                      משקל
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={p.weight}
+                        onChange={(e) => updateParameter(ci, pi, { weight: Number(e.target.value) })}
+                        className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                      />
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500">
+                        סולם מ-
+                        <input
+                          type="number"
+                          value={p.scaleMin}
+                          onChange={(e) => updateParameter(ci, pi, { scaleMin: Number(e.target.value) })}
+                          className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                        />
+                      </label>
+                      <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500">
+                        סולם עד
+                        <input
+                          type="number"
+                          value={p.scaleMax}
+                          onChange={(e) => updateParameter(ci, pi, { scaleMax: Number(e.target.value) })}
+                          className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
                 <button
                   type="button"
-                  onClick={() => removeParameter(i)}
-                  disabled={parameters.length <= 1}
-                  aria-label="הסר פרמטר"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                  onClick={() => addParameter(ci)}
+                  className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1.5 text-xs font-medium text-zinc-600"
                 >
-                  ✕
+                  + הוסף תת-שאלה
                 </button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <label className="flex flex-col gap-1 text-xs text-zinc-500">
-                  משקל
-                  <input
-                    type="number"
-                    min={0.1}
-                    step={0.5}
-                    value={p.weight}
-                    onChange={(e) => updateParameter(i, { weight: Number(e.target.value) })}
-                    className="rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-zinc-500">
-                  סולם מ-
-                  <input
-                    type="number"
-                    value={p.scaleMin}
-                    onChange={(e) => updateParameter(i, { scaleMin: Number(e.target.value) })}
-                    className="rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-zinc-500">
-                  סולם עד
-                  <input
-                    type="number"
-                    value={p.scaleMax}
-                    onChange={(e) => updateParameter(i, { scaleMax: Number(e.target.value) })}
-                    className="rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                  />
-                </label>
               </div>
             </div>
           ))}
         </div>
         <button
           type="button"
-          onClick={addParameter}
+          onClick={addCategory}
           className="self-start rounded-xl border border-dashed border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-600"
         >
-          + הוסף פרמטר
+          + הוסף קטגוריה
         </button>
       </section>
 

@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import type { EventRow, ItemRow, ParameterRow, ParticipantRow } from '@/lib/types'
+import type { CategoryRow, EventRow, ItemRow, ParameterRow, ParticipantRow } from '@/lib/types'
 
 interface Props {
   event: EventRow
   items: ItemRow[]
+  categories: CategoryRow[]
   parameters: ParameterRow[]
 }
 
@@ -19,7 +20,7 @@ function scoreKey(itemId: string, parameterId: string) {
   return `${itemId}:${parameterId}`
 }
 
-export default function ParticipantFlow({ event, items, parameters }: Props) {
+export default function ParticipantFlow({ event, items, categories, parameters }: Props) {
   const [supabase] = useState(() => createClient())
   const [checking, setChecking] = useState(true)
   const [participant, setParticipant] = useState<ParticipantRow | null>(null)
@@ -138,30 +139,44 @@ export default function ParticipantFlow({ event, items, parameters }: Props) {
       </div>
 
       {activeItem && (
-        <div className="flex flex-col gap-4">
-          {parameters.map((param) => {
-            const current = scores[scoreKey(activeItem.id, param.id)]
-            const options = Array.from(
-              { length: param.scale_max - param.scale_min + 1 },
-              (_, i) => param.scale_min + i
-            )
+        <div className="flex flex-col gap-6">
+          {categories.map((category) => {
+            const categoryParams = parameters.filter((p) => p.category_id === category.id)
+            if (categoryParams.length === 0) return null
             return (
-              <div key={param.id} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4">
-                <span className="text-sm font-medium text-zinc-700">{param.name}</span>
-                <div className="flex flex-wrap gap-2">
-                  {options.map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => setScore(activeItem.id, param.id, opt)}
-                      className={`flex h-11 w-11 items-center justify-center rounded-full border text-sm font-semibold ${
-                        current === opt
-                          ? 'border-zinc-900 bg-zinc-900 text-white'
-                          : 'border-zinc-300 bg-white text-zinc-700'
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
+              <div key={category.id} className="flex flex-col gap-3">
+                <h3 className="text-sm font-semibold text-zinc-800">{category.name}</h3>
+                <div className="flex flex-col gap-3">
+                  {categoryParams.map((param) => {
+                    const current = scores[scoreKey(activeItem.id, param.id)]
+                    const options = Array.from(
+                      { length: param.scale_max - param.scale_min + 1 },
+                      (_, i) => param.scale_min + i
+                    )
+                    return (
+                      <div
+                        key={param.id}
+                        className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4"
+                      >
+                        <span className="text-sm font-medium text-zinc-700">{param.name}</span>
+                        <div className="flex flex-wrap gap-2">
+                          {options.map((opt) => (
+                            <button
+                              key={opt}
+                              onClick={() => setScore(activeItem.id, param.id, opt)}
+                              className={`flex h-11 w-11 items-center justify-center rounded-full border text-sm font-semibold ${
+                                current === opt
+                                  ? 'border-zinc-900 bg-zinc-900 text-white'
+                                  : 'border-zinc-300 bg-white text-zinc-700'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )

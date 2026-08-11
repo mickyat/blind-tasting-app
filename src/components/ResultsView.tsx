@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { calculateResults, rankResults } from '@/lib/results'
-import type { EventRow, ItemRow, ParameterRow, ParticipantRow, ScoreRow } from '@/lib/types'
+import type { CategoryRow, EventRow, ItemRow, ParameterRow, ParticipantRow, ScoreRow } from '@/lib/types'
 
 interface Props {
   event: EventRow
   items: ItemRow[]
+  categories: CategoryRow[]
   parameters: ParameterRow[]
 }
 
-export default function ResultsView({ event, items, parameters }: Props) {
+export default function ResultsView({ event, items, categories, parameters }: Props) {
   const [supabase] = useState(() => createClient())
   const [participants, setParticipants] = useState<ParticipantRow[]>([])
   const [scores, setScores] = useState<ScoreRow[]>([])
@@ -88,7 +89,7 @@ export default function ResultsView({ event, items, parameters }: Props) {
     )
   }
 
-  const ranked = rankResults(calculateResults(items, parameters, scores))
+  const ranked = rankResults(calculateResults(items, categories, parameters, scores))
 
   return (
     <div className="flex flex-col gap-3">
