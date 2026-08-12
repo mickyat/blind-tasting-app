@@ -52,7 +52,8 @@ create table item (
   id uuid primary key default gen_random_uuid(),
   item_type_id uuid not null references item_type(id) on delete cascade,
   label text not null,
-  sort_order int not null default 0
+  sort_order int not null default 0,
+  results_open boolean not null default false
 );
 create index item_item_type_id_idx on item(item_type_id);
 
@@ -186,6 +187,7 @@ create policy "anyone can delete their checklist answers" on checklist_answer
 -- Broadcast row changes so the results screen updates without a refresh.
 
 alter publication supabase_realtime add table event;
+alter publication supabase_realtime add table item;
 alter publication supabase_realtime add table participant;
 alter publication supabase_realtime add table score;
 alter publication supabase_realtime add table checklist_answer;

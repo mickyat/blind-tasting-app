@@ -212,6 +212,9 @@ export async function createEvent(input: CreateEventInput) {
   }
 }
 
+// Opens results for every item in the event at once (the "הצג תוצאות"
+// bulk button). Per-item publishing (openItemResults) is the finer-grained
+// alternative.
 export async function openResults(hostToken: string) {
   const supabase = createAdminClient()
 
@@ -223,11 +226,47 @@ export async function openResults(hostToken: string) {
 
   if (!admin) return { error: 'קישור ניהול לא תקין' }
 
-  const { error } = await supabase
-    .from('event')
-    .update({ results_open: true })
-    .eq('id', admin.event_id)
+  const { data: types } = await supabase.from('item_type').select('id').eq('event_id', admin.event_id)
+  const typeIds = (types ?? []).map((t) => t.id)
 
+  if (typeIds.length > 0) {
+    const { error: itemsError } = await supabase
+      .from('item')
+      .update({ results_open: true })
+      .in('item_type_id', typeIds)
+    if (itemsError) return { error: 'שגיאה בפתיחת התוצאות' }
+  }
+
+  const { error } = await supabase.from('event').update({ results_open: true }).eq('id', admin.event_id)
   if (error) return { error: 'שגיאה בפתיחת התוצאות' }
+  return { ok: true }
+}
+
+export async function openItemResults(hostToken: string, itemId: string) {
+  const supabase = createAdminClient()
+
+  const { data: admin } = await supabase
+    .from('event_admin')
+    .select('event_id')
+    .eq('host_token', hostToken)
+    .maybeSingle()
+
+  if (!admin) return { error: 'קישור ניהול לא תקין' }
+
+  const { data: item } = await supabase.from('item').select('id, item_type_id').eq('id', itemId).maybeSingle()
+  if (!item) return { error: 'הפריט לא נמצא' }
+
+  const { data: itemType } = await supabase
+    .from('item_type')
+    .select('event_id')
+    .eq('id', item.item_type_id)
+    .maybeSingle()
+
+  if (!itemType || itemType.event_id !== admin.event_id) {
+    return { error: 'הפריט לא שייך לאירוע הזה' }
+  }
+
+  const { error } = await supabase.from('item').update({ results_open: true }).eq('id', itemId)
+  if (error) return { error: 'שגיאה בפתיחת התוצאות לפריט' }
   return { ok: true }
 }

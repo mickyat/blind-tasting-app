@@ -26,6 +26,7 @@ export interface ItemRow {
   item_type_id: string
   label: string
   sort_order: number
+  results_open: boolean
 }
 
 export interface CategoryRow {

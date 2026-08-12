@@ -1,4 +1,11 @@
-import type { CategoryRow, ItemRow, ParameterRow, ScoreRow } from './types'
+import type {
+  CategoryRow,
+  ChecklistAnswerRow,
+  ItemRow,
+  ItemTypeRow,
+  ParameterRow,
+  ScoreRow,
+} from './types'
 
 export interface ItemResult {
   item: ItemRow
@@ -7,10 +14,12 @@ export interface ItemResult {
 }
 
 // Per item, per participant:
-//   1. within each category, weighted average of its 'scale' sub-question
-//      scores: sum(value * parameter.weight) / sum(parameter.weight)
-//      ('checklist' sub-questions never appear here - they have no rows in
-//      `score`, only in `checklist_answer`, so they never affect this math)
+//   1. within each category the participant actually answered anything in,
+//      weighted average of its 'scale' sub-question scores:
+//      sum(value * parameter.weight) / sum(parameter.weight)
+//      (categories/sub-questions never touched simply have no rows in
+//      `scores`, so they're naturally excluded from both the numerator and
+//      denominator here - partial fill "just works")
 //   2. the participant's score for the item is the weighted average of
 //      those category scores: sum(category_score * category.weight) / sum(category.weight)
 // The item's final score is the average of all participants' scores.
@@ -85,18 +94,57 @@ export function rankResults(results: ItemResult[]): ItemResult[] {
   })
 }
 
-// How many 'scale' answers a participant needs to submit to be "done" -
-// 'checklist' questions are optional descriptive commentary and never
-// required for completion.
-export function countRequiredScores(
-  items: ItemRow[],
+// The category physically last in an item type's category list (by
+// sort_order) is the one mandatory category - every other category is
+// optional. Identified by position, not by name.
+export function getLastCategory(itemTypeId: string, categories: CategoryRow[]): CategoryRow | null {
+  const forType = categories.filter((c) => c.item_type_id === itemTypeId)
+  if (forType.length === 0) return null
+  return forType.reduce((last, c) => (c.sort_order > last.sort_order ? c : last))
+}
+
+export function answeredKey(participantId: string, itemId: string, parameterId: string) {
+  return `${participantId}:${itemId}:${parameterId}`
+}
+
+// A single set covering both 'scale' answers (score rows) and 'checklist'
+// answers (checklist_answer rows), so completion checks don't care which
+// kind a parameter is.
+export function buildAnsweredSet(
+  scores: ScoreRow[],
+  checklistAnswers: ChecklistAnswerRow[]
+): Set<string> {
+  const set = new Set<string>()
+  for (const s of scores) set.add(answeredKey(s.participant_id, s.item_id, s.parameter_id))
+  for (const a of checklistAnswers) set.add(answeredKey(a.participant_id, a.item_id, a.parameter_id))
+  return set
+}
+
+// An item is "done" for a participant once every parameter in its item
+// type's last category has an answer - every other category is optional.
+export function isItemDone(
+  participantId: string,
+  item: ItemRow,
   categories: CategoryRow[],
-  parameters: ParameterRow[]
-): number {
-  const scaleParamsByItemType = new Map<string, number>()
-  for (const cat of categories) {
-    const count = parameters.filter((p) => p.category_id === cat.id && p.kind === 'scale').length
-    scaleParamsByItemType.set(cat.item_type_id, (scaleParamsByItemType.get(cat.item_type_id) ?? 0) + count)
-  }
-  return items.reduce((sum, item) => sum + (scaleParamsByItemType.get(item.item_type_id) ?? 0), 0)
+  parameters: ParameterRow[],
+  answered: Set<string>
+): boolean {
+  const lastCategory = getLastCategory(item.item_type_id, categories)
+  if (!lastCategory) return false
+  const lastCategoryParams = parameters.filter((p) => p.category_id === lastCategory.id)
+  if (lastCategoryParams.length === 0) return false
+  return lastCategoryParams.every((p) => answered.has(answeredKey(participantId, item.id, p.id)))
+}
+
+// The order participants taste items in: grouped by item type in the order
+// the organizer defined the item types, then by each item's own order
+// within its type. Used for "next item" navigation.
+export function orderItemsByType(items: ItemRow[], itemTypes: ItemTypeRow[]): ItemRow[] {
+  const typeOrder = new Map(itemTypes.map((t, i) => [t.id, i]))
+  return [...items].sort((a, b) => {
+    const ta = typeOrder.get(a.item_type_id) ?? 0
+    const tb = typeOrder.get(b.item_type_id) ?? 0
+    if (ta !== tb) return ta - tb
+    return a.sort_order - b.sort_order
+  })
 }

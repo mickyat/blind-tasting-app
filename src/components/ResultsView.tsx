@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { calculateResults, countRequiredScores, rankResults, type ItemResult } from '@/lib/results'
+import { buildAnsweredSet, calculateResults, isItemDone, rankResults, type ItemResult } from '@/lib/results'
 import type {
   CategoryRow,
   ChecklistAnswerRow,
@@ -27,9 +27,7 @@ export default function ResultsView({ event, itemTypes, items, categories, param
   const [participants, setParticipants] = useState<ParticipantRow[]>([])
   const [scores, setScores] = useState<ScoreRow[]>([])
   const [checklistAnswers, setChecklistAnswers] = useState<ChecklistAnswerRow[]>([])
-  const [resultsOpen, setResultsOpen] = useState(event.results_open)
-
-  const requiredPerParticipant = countRequiredScores(items, categories, parameters)
+  const [itemsState, setItemsState] = useState<ItemRow[]>(items)
 
   const refresh = useCallback(async () => {
     const { data: parts } = await supabase.from('participant').select('*').eq('event_id', event.id)
@@ -57,47 +55,40 @@ export default function ResultsView({ event, itemTypes, items, categories, param
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'score' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'checklist_answer' }, () => refresh())
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'event', filter: `id=eq.${event.id}` },
-        (payload) => {
-          const updated = payload.new as { results_open?: boolean }
-          setResultsOpen(Boolean(updated.results_open))
-        }
-      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'item' }, (payload) => {
+        const updated = payload.new as { id: string; results_open?: boolean }
+        setItemsState((prev) =>
+          prev.map((i) => (i.id === updated.id ? { ...i, results_open: Boolean(updated.results_open) } : i))
+        )
+      })
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
   }, [refresh, supabase, event.id])
 
-  const doneCounts: Record<string, number> = {}
-  for (const s of scores) {
-    doneCounts[s.participant_id] = (doneCounts[s.participant_id] ?? 0) + 1
-  }
-  const participantsDone = participants.filter(
-    (p) => (doneCounts[p.id] ?? 0) >= requiredPerParticipant
-  ).length
+  const answered = useMemo(() => buildAnsweredSet(scores, checklistAnswers), [scores, checklistAnswers])
 
-  let shouldShow = false
-  if (event.results_visibility === 'live') shouldShow = true
-  else if (event.results_visibility === 'after_all_done') {
-    shouldShow = participants.length > 0 && participantsDone === participants.length
-  } else {
-    shouldShow = resultsOpen
-  }
+  const isItemOpen = useCallback(
+    (item: ItemRow) => {
+      if (event.results_visibility === 'live') return true
+      if (event.results_visibility === 'after_all_done') {
+        return participants.length > 0 && participants.every((p) => isItemDone(p.id, item, categories, parameters, answered))
+      }
+      return item.results_open
+    },
+    [event.results_visibility, participants, categories, parameters, answered]
+  )
 
-  if (!shouldShow) {
+  const openItems = itemsState.filter(isItemOpen)
+  const pendingItems = itemsState.filter((i) => !isItemOpen(i))
+
+  if (openItems.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-800" />
         {event.results_visibility === 'after_all_done' ? (
-          <>
-            <p className="text-base font-medium text-zinc-700">מחכים שכולם יסיימו לדרג</p>
-            <p className="text-sm text-zinc-500">
-              {participantsDone}/{participants.length || 0} משתתפים סיימו
-            </p>
-          </>
+          <p className="text-base font-medium text-zinc-700">מחכים שמשתתפים יסיימו לדרג פריטים</p>
         ) : (
           <p className="text-base font-medium text-zinc-700">מחכים שהמארגן יפתח את התוצאות</p>
         )}
@@ -105,7 +96,7 @@ export default function ResultsView({ event, itemTypes, items, categories, param
     )
   }
 
-  const overallRanked = rankResults(calculateResults(items, categories, parameters, scores))
+  const overallRanked = rankResults(calculateResults(openItems, categories, parameters, scores))
   const hasMultipleTypes = itemTypes.length > 1
 
   return (
@@ -114,14 +105,21 @@ export default function ResultsView({ event, itemTypes, items, categories, param
 
       {hasMultipleTypes &&
         itemTypes.map((t) => {
-          const typeItems = items.filter((i) => i.item_type_id === t.id)
+          const typeItems = openItems.filter((i) => i.item_type_id === t.id)
           if (typeItems.length === 0) return null
           const typeRanked = rankResults(calculateResults(typeItems, categories, parameters, scores))
           return <RankingList key={t.id} title={`דירוג ${t.name}`} results={typeRanked} />
         })}
 
+      {pendingItems.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-xl border border-dashed border-zinc-300 p-4">
+          <span className="text-xs font-medium text-zinc-500">טרם פורסמו</span>
+          <span className="text-sm text-zinc-600">{pendingItems.map((i) => i.label).join(', ')}</span>
+        </div>
+      )}
+
       <DescriptiveSummary
-        items={items}
+        items={openItems}
         categories={categories}
         parameters={parameters}
         checklistAnswers={checklistAnswers}
