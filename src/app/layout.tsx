@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "הטעמות עיוורות",
   description: "אפליקציה ליצירת אירועי הטעימה עיוורת ושיתוף תוצאות בזמן אמת",
+};
+
+// Explicitly not setting maximumScale/userScalable so the browser's own
+// pinch-zoom always stays available, on top of the in-app text size control.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

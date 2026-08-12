@@ -1,4 +1,5 @@
 export type ResultsVisibility = 'manual' | 'after_all_done' | 'live'
+export type EventTheme = 'default' | 'wine' | 'meat' | 'beer' | 'coffee'
 
 export interface EventRow {
   id: string
@@ -6,6 +7,8 @@ export interface EventRow {
   share_token: string
   results_visibility: ResultsVisibility
   results_open: boolean
+  theme: EventTheme
+  logo_url: string | null
   created_at: string
 }
 

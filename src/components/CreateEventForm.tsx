@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { createEvent } from '@/app/actions'
-import type { ResultsVisibility } from '@/lib/types'
+import { createEvent, uploadEventLogo } from '@/app/actions'
+import type { EventTheme, ResultsVisibility } from '@/lib/types'
+import { THEME_STYLES } from '@/lib/theme'
+import { EVENT_TEMPLATES } from '@/lib/templates'
 
 interface ParameterDraft {
   name: string
@@ -34,12 +36,58 @@ const VISIBILITY_OPTIONS: { value: ResultsVisibility; label: string; hint: strin
 
 export default function CreateEventForm() {
   const router = useRouter()
+  const [step, setStep] = useState<'template' | 'form'>('template')
+  const [theme, setTheme] = useState<EventTheme>('default')
   const [title, setTitle] = useState('')
   const [items, setItems] = useState(['', ''])
   const [categories, setCategories] = useState<CategoryDraft[]>([emptyCategory()])
   const [visibility, setVisibility] = useState<ResultsVisibility>('manual')
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+
+  function chooseTemplate(templateId: EventTheme) {
+    const template = EVENT_TEMPLATES.find((t) => t.id === templateId)
+    if (template) {
+      setCategories(
+        template.categories.map((c) => ({
+          name: c.name,
+          weight: c.weight,
+          parameters: c.parameters.map((p) => ({ ...p })),
+        }))
+      )
+      setTheme(template.id)
+    }
+    setStep('form')
+  }
+
+  function startFromScratch() {
+    setCategories([emptyCategory()])
+    setTheme('default')
+    setStep('form')
+  }
+
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoError(null)
+    setLogoUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const result = await uploadEventLogo(fd)
+    setLogoUploading(false)
+    if ('error' in result && result.error) {
+      setLogoError(result.error)
+      return
+    }
+    if (!('url' in result) || !result.url) {
+      setLogoError('שגיאה לא צפויה, נסה שוב')
+      return
+    }
+    setLogoUrl(result.url)
+  }
 
   function updateItem(i: number, value: string) {
     setItems((prev) => prev.map((v, idx) => (idx === i ? value : v)))
@@ -92,6 +140,8 @@ export default function CreateEventForm() {
         resultsVisibility: visibility,
         items,
         categories,
+        theme,
+        logoUrl,
       })
       if ('error' in result && result.error) {
         setError(result.error)
@@ -105,8 +155,47 @@ export default function CreateEventForm() {
     })
   }
 
+  if (step === 'template') {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-center text-sm text-zinc-500">איך תרצה להתחיל?</p>
+        <div className="grid grid-cols-2 gap-3">
+          {EVENT_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => chooseTemplate(t.id)}
+              className={`flex flex-col items-center gap-1 rounded-xl border border-zinc-300 p-4 text-center font-medium ${THEME_STYLES[t.id].bg}`}
+            >
+              <span className={`text-base font-semibold ${THEME_STYLES[t.id].accent}`}>{t.label}</span>
+              <span className="text-xs font-normal text-zinc-500">תבנית מוכנה</span>
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={startFromScratch}
+          className="rounded-xl border border-dashed border-zinc-400 px-4 py-3 text-sm font-medium text-zinc-600"
+        >
+          התחל מאפס
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+    <form
+      onSubmit={handleSubmit}
+      className={`flex flex-col gap-8 rounded-2xl p-4 -mx-4 ${THEME_STYLES[theme].bg}`}
+    >
+      <button
+        type="button"
+        onClick={() => setStep('template')}
+        className="self-start text-xs font-medium text-zinc-500 underline"
+      >
+        ← חזרה לבחירת תבנית
+      </button>
+
       <section className="flex flex-col gap-2">
         <label htmlFor="title" className="text-sm font-medium text-zinc-700">
           כותרת האירוע
@@ -121,6 +210,33 @@ export default function CreateEventForm() {
         />
       </section>
 
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-medium text-zinc-700">לוגו (אופציונלי)</h2>
+        {logoUrl ? (
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoUrl} alt="לוגו" className="h-14 w-14 rounded-lg border border-zinc-300 object-contain bg-white" />
+            <button
+              type="button"
+              onClick={() => setLogoUrl(null)}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-600"
+            >
+              הסר לוגו
+            </button>
+          </div>
+        ) : (
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            onChange={handleLogoChange}
+            disabled={logoUploading}
+            className="text-sm text-zinc-600"
+          />
+        )}
+        {logoUploading && <p className="text-xs text-zinc-500">מעלה…</p>}
+        {logoError && <p className="text-xs text-red-600">{logoError}</p>}
+      </section>
+
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-zinc-700">פריטים להטעימה</h2>
         <div className="flex flex-col gap-2">
@@ -130,7 +246,7 @@ export default function CreateEventForm() {
                 value={item}
                 onChange={(e) => updateItem(i, e.target.value)}
                 placeholder={`פריט ${i + 1} (למשל: יין מספר ${i + 1})`}
-                className="flex-1 rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
+                className="min-w-0 flex-1 rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
                 required
               />
               <button

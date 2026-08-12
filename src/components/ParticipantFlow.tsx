@@ -20,12 +20,39 @@ function scoreKey(itemId: string, parameterId: string) {
   return `${itemId}:${parameterId}`
 }
 
+type TextSize = 'normal' | 'large' | 'xlarge'
+
+const TEXT_SIZE_LABELS: Record<TextSize, string> = {
+  normal: 'רגיל',
+  large: 'גדול',
+  xlarge: 'גדול מאוד',
+}
+
+const TEXT_SIZE_STYLES: Record<TextSize, { heading: string; label: string; button: string }> = {
+  normal: { heading: 'text-sm', label: 'text-sm', button: 'h-11 w-11 text-sm' },
+  large: { heading: 'text-base', label: 'text-base', button: 'h-12 w-12 text-base' },
+  xlarge: { heading: 'text-lg', label: 'text-lg', button: 'h-14 w-14 text-lg' },
+}
+
+const TEXT_SIZE_STORAGE_KEY = 'bt_text_size'
+
 export default function ParticipantFlow({ event, items, categories, parameters }: Props) {
   const [supabase] = useState(() => createClient())
   const [checking, setChecking] = useState(true)
   const [participant, setParticipant] = useState<ParticipantRow | null>(null)
   const [scores, setScores] = useState<Record<string, number>>({})
   const [activeItemId, setActiveItemId] = useState<string | undefined>(items[0]?.id)
+  const [textSize, setTextSize] = useState<TextSize>('normal')
+
+  useEffect(() => {
+    const saved = localStorage.getItem(TEXT_SIZE_STORAGE_KEY)
+    if (saved === 'normal' || saved === 'large' || saved === 'xlarge') setTextSize(saved)
+  }, [])
+
+  function changeTextSize(size: TextSize) {
+    setTextSize(size)
+    localStorage.setItem(TEXT_SIZE_STORAGE_KEY, size)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -122,6 +149,24 @@ export default function ParticipantFlow({ event, items, categories, parameters }
         </span>
       </div>
 
+      <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl bg-white px-4 py-2">
+        <span className="text-xs text-zinc-500">גודל טקסט:</span>
+        {(Object.keys(TEXT_SIZE_LABELS) as TextSize[]).map((size) => (
+          <button
+            key={size}
+            type="button"
+            onClick={() => changeTextSize(size)}
+            className={`rounded-lg border px-2 py-1 text-xs font-medium ${
+              textSize === size
+                ? 'border-zinc-900 bg-zinc-900 text-white'
+                : 'border-zinc-300 bg-white text-zinc-700'
+            }`}
+          >
+            {TEXT_SIZE_LABELS[size]}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-2 overflow-x-auto pb-1">
         {items.map((item) => (
           <button
@@ -145,7 +190,9 @@ export default function ParticipantFlow({ event, items, categories, parameters }
             if (categoryParams.length === 0) return null
             return (
               <div key={category.id} className="flex flex-col gap-3">
-                <h3 className="text-sm font-semibold text-zinc-800">{category.name}</h3>
+                <h3 className={`font-semibold text-zinc-800 ${TEXT_SIZE_STYLES[textSize].heading}`}>
+                  {category.name}
+                </h3>
                 <div className="flex flex-col gap-3">
                   {categoryParams.map((param) => {
                     const current = scores[scoreKey(activeItem.id, param.id)]
@@ -158,13 +205,15 @@ export default function ParticipantFlow({ event, items, categories, parameters }
                         key={param.id}
                         className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4"
                       >
-                        <span className="text-sm font-medium text-zinc-700">{param.name}</span>
+                        <span className={`font-medium text-zinc-700 ${TEXT_SIZE_STYLES[textSize].label}`}>
+                          {param.name}
+                        </span>
                         <div className="flex flex-wrap gap-2">
                           {options.map((opt) => (
                             <button
                               key={opt}
                               onClick={() => setScore(activeItem.id, param.id, opt)}
-                              className={`flex h-11 w-11 items-center justify-center rounded-full border text-sm font-semibold ${
+                              className={`flex items-center justify-center rounded-full border font-semibold ${TEXT_SIZE_STYLES[textSize].button} ${
                                 current === opt
                                   ? 'border-zinc-900 bg-zinc-900 text-white'
                                   : 'border-zinc-300 bg-white text-zinc-700'

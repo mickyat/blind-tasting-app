@@ -1,6 +1,7 @@
--- Blind Tasting App - schema (v2: categories with nested sub-questions)
+-- Blind Tasting App - schema (v3: categories + theme/logo)
 -- Run this once in the Supabase SQL Editor (Project -> SQL Editor -> New query)
--- This DROPS and recreates every table - fine while there's no real data yet.
+-- This DROPS and recreates every table. For an existing DB you want to keep,
+-- use supabase/migration-003-theme-logo.sql instead (additive, no data loss).
 
 drop table if exists score cascade;
 drop table if exists participant cascade;
@@ -21,6 +22,9 @@ create table event (
   results_visibility text not null default 'manual'
     check (results_visibility in ('manual', 'after_all_done', 'live')),
   results_open boolean not null default false,
+  theme text not null default 'default'
+    check (theme in ('default', 'wine', 'meat', 'beer', 'coffee')),
+  logo_url text,
   created_at timestamptz not null default now()
 );
 

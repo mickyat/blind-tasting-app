@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { ResultsVisibility } from '@/lib/types'
+import type { EventTheme, ResultsVisibility } from '@/lib/types'
 
 interface ParameterInput {
   name: string
@@ -21,6 +21,37 @@ interface CreateEventInput {
   resultsVisibility: ResultsVisibility
   items: string[]
   categories: CategoryInput[]
+  theme: EventTheme
+  logoUrl: string | null
+}
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024
+const ALLOWED_LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
+
+export async function uploadEventLogo(formData: FormData) {
+  const file = formData.get('file')
+  if (!(file instanceof File)) return { error: 'לא נבחר קובץ' }
+  if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+    return { error: 'סוג קובץ לא נתמך (רק PNG / JPEG / WebP / SVG)' }
+  }
+  if (file.size > MAX_LOGO_BYTES) {
+    return { error: 'הקובץ גדול מדי (עד 2MB)' }
+  }
+
+  const supabase = createAdminClient()
+  const ext = file.name.split('.').pop() || 'png'
+  const path = `${crypto.randomUUID()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('event-logos')
+    .upload(path, file, { contentType: file.type })
+
+  if (uploadError) {
+    return { error: 'שגיאה בהעלאת הלוגו, נסה שוב' }
+  }
+
+  const { data } = supabase.storage.from('event-logos').getPublicUrl(path)
+  return { url: data.publicUrl }
 }
 
 export async function createEvent(input: CreateEventInput) {
@@ -60,7 +91,12 @@ export async function createEvent(input: CreateEventInput) {
 
   const { data: event, error: eventError } = await supabase
     .from('event')
-    .insert({ title, results_visibility: input.resultsVisibility })
+    .insert({
+      title,
+      results_visibility: input.resultsVisibility,
+      theme: input.theme,
+      logo_url: input.logoUrl,
+    })
     .select()
     .single()
 

@@ -1,5 +1,7 @@
 import { createPublicClient } from '@/lib/supabase/public'
 import ParticipantFlow from '@/components/ParticipantFlow'
+import { THEME_STYLES } from '@/lib/theme'
+import type { EventRow } from '@/lib/types'
 
 export default async function JoinPage(props: PageProps<'/e/[shareToken]'>) {
   const { shareToken } = await props.params
@@ -31,18 +33,27 @@ export default async function JoinPage(props: PageProps<'/e/[shareToken]'>) {
       ? await supabase.from('parameter').select('*').in('category_id', categoryIds).order('sort_order')
       : { data: [] }
 
+  const ev = event as EventRow
+  const theme = THEME_STYLES[ev.theme]
+
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
-      <header className="flex flex-col gap-1 text-center">
-        <h1 className="text-xl font-bold">{event.title}</h1>
-        <p className="text-xs text-zinc-500">הטעמה עיוורת</p>
-      </header>
-      <ParticipantFlow
-        event={event}
-        items={items ?? []}
-        categories={categories ?? []}
-        parameters={parameters ?? []}
-      />
+    <main className={`flex-1 ${theme.bg}`}>
+      <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-8">
+        <header className="flex flex-col items-center gap-2 text-center">
+          {ev.logo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ev.logo_url} alt="" className="h-16 w-16 rounded-lg object-contain" />
+          )}
+          <h1 className={`text-xl font-bold ${theme.accent}`}>{ev.title}</h1>
+          <p className="text-xs text-zinc-500">הטעמה עיוורת</p>
+        </header>
+        <ParticipantFlow
+          event={ev}
+          items={items ?? []}
+          categories={categories ?? []}
+          parameters={parameters ?? []}
+        />
+      </div>
     </main>
   )
 }
