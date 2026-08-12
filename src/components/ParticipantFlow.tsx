@@ -3,10 +3,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import type { CategoryRow, EventRow, ItemRow, ParameterRow, ParticipantRow } from '@/lib/types'
+import type {
+  CategoryRow,
+  EventRow,
+  ItemRow,
+  ItemTypeRow,
+  ParameterRow,
+  ParticipantRow,
+} from '@/lib/types'
 
 interface Props {
   event: EventRow
+  itemTypes: ItemTypeRow[]
   items: ItemRow[]
   categories: CategoryRow[]
   parameters: ParameterRow[]
@@ -36,11 +44,12 @@ const TEXT_SIZE_STYLES: Record<TextSize, { heading: string; label: string; butto
 
 const TEXT_SIZE_STORAGE_KEY = 'bt_text_size'
 
-export default function ParticipantFlow({ event, items, categories, parameters }: Props) {
+export default function ParticipantFlow({ event, itemTypes, items, categories, parameters }: Props) {
   const [supabase] = useState(() => createClient())
   const [checking, setChecking] = useState(true)
   const [participant, setParticipant] = useState<ParticipantRow | null>(null)
   const [scores, setScores] = useState<Record<string, number>>({})
+  const [checklistAnswers, setChecklistAnswers] = useState<Record<string, Set<string>>>({})
   const [activeItemId, setActiveItemId] = useState<string | undefined>(items[0]?.id)
   const [textSize, setTextSize] = useState<TextSize>('normal')
 
@@ -79,10 +88,13 @@ export default function ParticipantFlow({ event, items, categories, parameters }
 
       setParticipant(existing)
 
-      const { data: existingScores } = await supabase
-        .from('score')
-        .select('item_id, parameter_id, value')
-        .eq('participant_id', existing.id)
+      const [{ data: existingScores }, { data: existingChecklist }] = await Promise.all([
+        supabase.from('score').select('item_id, parameter_id, value').eq('participant_id', existing.id),
+        supabase
+          .from('checklist_answer')
+          .select('item_id, parameter_id, option')
+          .eq('participant_id', existing.id),
+      ])
 
       if (!cancelled && existingScores) {
         const map: Record<string, number> = {}
@@ -90,6 +102,15 @@ export default function ParticipantFlow({ event, items, categories, parameters }
           map[scoreKey(s.item_id, s.parameter_id)] = Number(s.value)
         }
         setScores(map)
+      }
+      if (!cancelled && existingChecklist) {
+        const map: Record<string, Set<string>> = {}
+        for (const a of existingChecklist) {
+          const key = scoreKey(a.item_id, a.parameter_id)
+          if (!map[key]) map[key] = new Set()
+          map[key].add(a.option)
+        }
+        setChecklistAnswers(map)
       }
       setChecking(false)
     }
@@ -99,15 +120,23 @@ export default function ParticipantFlow({ event, items, categories, parameters }
     }
   }, [event.id, supabase])
 
-  const requiredPerItem = parameters.length
   const doneItemIds = useMemo(() => {
     const done = new Set<string>()
     for (const item of items) {
-      const filled = parameters.every((p) => scores[scoreKey(item.id, p.id)] !== undefined)
-      if (filled && requiredPerItem > 0) done.add(item.id)
+      const itemParams = parameters.filter((p) =>
+        categories.some((c) => c.id === p.category_id && c.item_type_id === item.item_type_id)
+      )
+      if (itemParams.length === 0) continue
+      const filled = itemParams.every((p) => {
+        const key = scoreKey(item.id, p.id)
+        return p.kind === 'scale'
+          ? scores[key] !== undefined
+          : (checklistAnswers[key]?.size ?? 0) > 0
+      })
+      if (filled) done.add(item.id)
     }
     return done
-  }, [items, parameters, scores, requiredPerItem])
+  }, [items, parameters, categories, scores, checklistAnswers])
 
   if (checking) {
     return <p className="text-center text-sm text-zinc-400">טוען…</p>
@@ -136,7 +165,66 @@ export default function ParticipantFlow({ event, items, categories, parameters }
       )
   }
 
+  async function toggleChecklistOption(
+    itemId: string,
+    parameterId: string,
+    option: string,
+    multiSelect: boolean
+  ) {
+    const key = scoreKey(itemId, parameterId)
+    const current = checklistAnswers[key] ?? new Set<string>()
+    const isSelected = current.has(option)
+
+    if (multiSelect) {
+      if (isSelected) {
+        await supabase
+          .from('checklist_answer')
+          .delete()
+          .match({ participant_id: participant!.id, item_id: itemId, parameter_id: parameterId, option })
+        const next = new Set(current)
+        next.delete(option)
+        setChecklistAnswers((prev) => ({ ...prev, [key]: next }))
+      } else {
+        await supabase
+          .from('checklist_answer')
+          .insert({ participant_id: participant!.id, item_id: itemId, parameter_id: parameterId, option })
+        const next = new Set(current)
+        next.add(option)
+        setChecklistAnswers((prev) => ({ ...prev, [key]: next }))
+      }
+    } else {
+      await supabase
+        .from('checklist_answer')
+        .delete()
+        .match({ participant_id: participant!.id, item_id: itemId, parameter_id: parameterId })
+      if (isSelected) {
+        setChecklistAnswers((prev) => ({ ...prev, [key]: new Set() }))
+      } else {
+        await supabase
+          .from('checklist_answer')
+          .insert({ participant_id: participant!.id, item_id: itemId, parameter_id: parameterId, option })
+        setChecklistAnswers((prev) => ({ ...prev, [key]: new Set([option]) }))
+      }
+    }
+  }
+
   const activeItem = items.find((i) => i.id === activeItemId) ?? items[0]
+
+  function renderItemTab(item: ItemRow) {
+    return (
+      <button
+        key={item.id}
+        onClick={() => setActiveItemId(item.id)}
+        className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium ${
+          activeItem?.id === item.id
+            ? 'border-zinc-900 bg-zinc-900 text-white'
+            : 'border-zinc-300 bg-white text-zinc-700'
+        }`}
+      >
+        {item.label} {doneItemIds.has(item.id) ? '✓' : ''}
+      </button>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -167,69 +255,104 @@ export default function ParticipantFlow({ event, items, categories, parameters }
         ))}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveItemId(item.id)}
-            className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium ${
-              activeItem?.id === item.id
-                ? 'border-zinc-900 bg-zinc-900 text-white'
-                : 'border-zinc-300 bg-white text-zinc-700'
-            }`}
-          >
-            {item.label} {doneItemIds.has(item.id) ? '✓' : ''}
-          </button>
-        ))}
-      </div>
+      {itemTypes.length > 1 ? (
+        <div className="flex flex-col gap-3">
+          {itemTypes.map((t) => (
+            <div key={t.id} className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-zinc-500">{t.name}</span>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {items.filter((i) => i.item_type_id === t.id).map(renderItemTab)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex gap-2 overflow-x-auto pb-1">{items.map(renderItemTab)}</div>
+      )}
 
       {activeItem && (
         <div className="flex flex-col gap-6">
-          {categories.map((category) => {
-            const categoryParams = parameters.filter((p) => p.category_id === category.id)
-            if (categoryParams.length === 0) return null
-            return (
-              <div key={category.id} className="flex flex-col gap-3">
-                <h3 className={`font-semibold text-zinc-800 ${TEXT_SIZE_STYLES[textSize].heading}`}>
-                  {category.name}
-                </h3>
-                <div className="flex flex-col gap-3">
-                  {categoryParams.map((param) => {
-                    const current = scores[scoreKey(activeItem.id, param.id)]
-                    const options = Array.from(
-                      { length: param.scale_max - param.scale_min + 1 },
-                      (_, i) => param.scale_min + i
-                    )
-                    return (
-                      <div
-                        key={param.id}
-                        className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4"
-                      >
-                        <span className={`font-medium text-zinc-700 ${TEXT_SIZE_STYLES[textSize].label}`}>
-                          {param.name}
-                        </span>
-                        <div className="flex flex-wrap gap-2">
-                          {options.map((opt) => (
-                            <button
-                              key={opt}
-                              onClick={() => setScore(activeItem.id, param.id, opt)}
-                              className={`flex items-center justify-center rounded-full border font-semibold ${TEXT_SIZE_STYLES[textSize].button} ${
-                                current === opt
-                                  ? 'border-zinc-900 bg-zinc-900 text-white'
-                                  : 'border-zinc-300 bg-white text-zinc-700'
-                              }`}
-                            >
-                              {opt}
-                            </button>
-                          ))}
+          {categories
+            .filter((c) => c.item_type_id === activeItem.item_type_id)
+            .map((category) => {
+              const categoryParams = parameters.filter((p) => p.category_id === category.id)
+              if (categoryParams.length === 0) return null
+              return (
+                <div key={category.id} className="flex flex-col gap-3">
+                  <h3 className={`font-semibold text-zinc-800 ${TEXT_SIZE_STYLES[textSize].heading}`}>
+                    {category.name}
+                  </h3>
+                  <div className="flex flex-col gap-3">
+                    {categoryParams.map((param) => {
+                      const key = scoreKey(activeItem.id, param.id)
+                      if (param.kind === 'scale') {
+                        const current = scores[key]
+                        const options = Array.from(
+                          { length: (param.scale_max ?? 5) - (param.scale_min ?? 1) + 1 },
+                          (_, i) => (param.scale_min ?? 1) + i
+                        )
+                        return (
+                          <div
+                            key={param.id}
+                            className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4"
+                          >
+                            <span className={`font-medium text-zinc-700 ${TEXT_SIZE_STYLES[textSize].label}`}>
+                              {param.name}
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {options.map((opt) => (
+                                <button
+                                  key={opt}
+                                  onClick={() => setScore(activeItem.id, param.id, opt)}
+                                  className={`flex items-center justify-center rounded-full border font-semibold ${TEXT_SIZE_STYLES[textSize].button} ${
+                                    current === opt
+                                      ? 'border-zinc-900 bg-zinc-900 text-white'
+                                      : 'border-zinc-300 bg-white text-zinc-700'
+                                  }`}
+                                >
+                                  {opt}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      const selected = checklistAnswers[key] ?? new Set<string>()
+                      return (
+                        <div
+                          key={param.id}
+                          className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4"
+                        >
+                          <span className={`font-medium text-zinc-700 ${TEXT_SIZE_STYLES[textSize].label}`}>
+                            {param.name}
+                            {param.multi_select && (
+                              <span className="mr-2 text-xs font-normal text-zinc-400">(בחירה מרובה)</span>
+                            )}
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {(param.options ?? []).map((opt) => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => toggleChecklistOption(activeItem.id, param.id, opt, param.multi_select)}
+                                className={`rounded-full border px-3 py-2 font-medium ${TEXT_SIZE_STYLES[textSize].label} ${
+                                  selected.has(opt)
+                                    ? 'border-zinc-900 bg-zinc-900 text-white'
+                                    : 'border-zinc-300 bg-white text-zinc-700'
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
         </div>
       )}
 

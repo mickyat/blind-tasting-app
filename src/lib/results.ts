@@ -7,8 +7,10 @@ export interface ItemResult {
 }
 
 // Per item, per participant:
-//   1. within each category, weighted average of its sub-question scores:
-//      sum(value * parameter.weight) / sum(parameter.weight)
+//   1. within each category, weighted average of its 'scale' sub-question
+//      scores: sum(value * parameter.weight) / sum(parameter.weight)
+//      ('checklist' sub-questions never appear here - they have no rows in
+//      `score`, only in `checklist_answer`, so they never affect this math)
 //   2. the participant's score for the item is the weighted average of
 //      those category scores: sum(category_score * category.weight) / sum(category.weight)
 // The item's final score is the average of all participants' scores.
@@ -81,4 +83,20 @@ export function rankResults(results: ItemResult[]): ItemResult[] {
     if (b.finalScore === null) return -1
     return b.finalScore - a.finalScore
   })
+}
+
+// How many 'scale' answers a participant needs to submit to be "done" -
+// 'checklist' questions are optional descriptive commentary and never
+// required for completion.
+export function countRequiredScores(
+  items: ItemRow[],
+  categories: CategoryRow[],
+  parameters: ParameterRow[]
+): number {
+  const scaleParamsByItemType = new Map<string, number>()
+  for (const cat of categories) {
+    const count = parameters.filter((p) => p.category_id === cat.id && p.kind === 'scale').length
+    scaleParamsByItemType.set(cat.item_type_id, (scaleParamsByItemType.get(cat.item_type_id) ?? 0) + count)
+  }
+  return items.reduce((sum, item) => sum + (scaleParamsByItemType.get(item.item_type_id) ?? 0), 0)
 }

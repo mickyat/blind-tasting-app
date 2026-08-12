@@ -20,17 +20,7 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
     )
   }
 
-  const [{ data: event }, { data: items }, { data: categories }] = await Promise.all([
-    supabase.from('event').select('*').eq('id', admin.event_id).single(),
-    supabase.from('item').select('*').eq('event_id', admin.event_id).order('sort_order'),
-    supabase.from('category').select('*').eq('event_id', admin.event_id).order('sort_order'),
-  ])
-
-  const categoryIds = (categories ?? []).map((c) => c.id)
-  const { data: parameters } =
-    categoryIds.length > 0
-      ? await supabase.from('parameter').select('*').in('category_id', categoryIds)
-      : { data: [] }
+  const { data: event } = await supabase.from('event').select('*').eq('id', admin.event_id).single()
 
   if (!event) {
     return (
@@ -39,6 +29,28 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
       </main>
     )
   }
+
+  const { data: itemTypes } = await supabase
+    .from('item_type')
+    .select('*')
+    .eq('event_id', admin.event_id)
+    .order('sort_order')
+
+  const itemTypeIds = (itemTypes ?? []).map((t) => t.id)
+
+  const [{ data: items }, { data: categories }] =
+    itemTypeIds.length > 0
+      ? await Promise.all([
+          supabase.from('item').select('*').in('item_type_id', itemTypeIds).order('sort_order'),
+          supabase.from('category').select('*').in('item_type_id', itemTypeIds).order('sort_order'),
+        ])
+      : [{ data: [] }, { data: [] }]
+
+  const categoryIds = (categories ?? []).map((c) => c.id)
+  const { data: parameters } =
+    categoryIds.length > 0
+      ? await supabase.from('parameter').select('*').in('category_id', categoryIds)
+      : { data: [] }
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
@@ -50,6 +62,7 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
         hostToken={hostToken}
         event={event}
         items={items ?? []}
+        categories={categories ?? []}
         parameters={parameters ?? []}
       />
     </main>

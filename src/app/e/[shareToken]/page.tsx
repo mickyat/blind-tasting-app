@@ -22,10 +22,21 @@ export default async function JoinPage(props: PageProps<'/e/[shareToken]'>) {
     )
   }
 
-  const [{ data: items }, { data: categories }] = await Promise.all([
-    supabase.from('item').select('*').eq('event_id', event.id).order('sort_order'),
-    supabase.from('category').select('*').eq('event_id', event.id).order('sort_order'),
-  ])
+  const { data: itemTypes } = await supabase
+    .from('item_type')
+    .select('*')
+    .eq('event_id', event.id)
+    .order('sort_order')
+
+  const itemTypeIds = (itemTypes ?? []).map((t) => t.id)
+
+  const [{ data: items }, { data: categories }] =
+    itemTypeIds.length > 0
+      ? await Promise.all([
+          supabase.from('item').select('*').in('item_type_id', itemTypeIds).order('sort_order'),
+          supabase.from('category').select('*').in('item_type_id', itemTypeIds).order('sort_order'),
+        ])
+      : [{ data: [] }, { data: [] }]
 
   const categoryIds = (categories ?? []).map((c) => c.id)
   const { data: parameters } =
@@ -49,6 +60,7 @@ export default async function JoinPage(props: PageProps<'/e/[shareToken]'>) {
         </header>
         <ParticipantFlow
           event={ev}
+          itemTypes={itemTypes ?? []}
           items={items ?? []}
           categories={categories ?? []}
           parameters={parameters ?? []}

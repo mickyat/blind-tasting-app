@@ -1,11 +1,20 @@
-import type { EventTheme } from './types'
-
-interface TemplateParameter {
+interface ScaleParameter {
+  kind: 'scale'
   name: string
   weight: number
   scaleMin: number
   scaleMax: number
 }
+
+interface ChecklistParameter {
+  kind: 'checklist'
+  name: string
+  weight: number
+  options: string[]
+  multiSelect: boolean
+}
+
+export type TemplateParameter = ScaleParameter | ChecklistParameter
 
 interface TemplateCategory {
   name: string
@@ -14,43 +23,106 @@ interface TemplateCategory {
 }
 
 export interface EventTemplate {
-  id: EventTheme
+  id: string
   label: string
   categories: TemplateCategory[]
 }
 
-function q(name: string): TemplateParameter {
-  return { name, weight: 1, scaleMin: 1, scaleMax: 5 }
+function q(name: string, weight = 1): ScaleParameter {
+  return { kind: 'scale', name, weight, scaleMin: 1, scaleMax: 5 }
 }
+
+function single(name: string, options: string[], weight = 1): ChecklistParameter {
+  return { kind: 'checklist', name, weight, options, multiSelect: false }
+}
+
+function multi(name: string, options: string[], weight = 1): ChecklistParameter {
+  return { kind: 'checklist', name, weight, options, multiSelect: true }
+}
+
+const AROMA_OPTIONS = [
+  'פרחוני',
+  'פרי ירוק',
+  'פרי הדר',
+  'פרי גלעין',
+  'פרי טרופי',
+  'פרי אדום',
+  'פרי שחור',
+  'עשבוני',
+  'צמחי-מרפא',
+  'תיבול',
+  'פירות בשלים',
+  'פירות לא בשלים',
+  'פירות מיובשים',
+  'פירות מבושלים',
+  'שמרים/לחם',
+  'חמאה/שמנת',
+  'עץ אלון',
+  'וניל',
+  'תבלינים',
+]
 
 export const EVENT_TEMPLATES: EventTemplate[] = [
   {
     id: 'wine',
     label: 'יין',
     categories: [
-      { name: 'מראה', weight: 1, parameters: [q('צבע'), q('צלילות')] },
-      { name: 'אף', weight: 1, parameters: [q('פגם'), q('עוצמה'), q('מורכבות')] },
-      { name: 'פה', weight: 1, parameters: [q('חמיצות'), q('עפיצות'), q('איזון'), q('אורך')] },
-      { name: 'כללי', weight: 1, parameters: [q('ייחודיות'), q('איזון כללי'), q('רצון לשוב אליו')] },
+      { name: 'נראות', weight: 1, parameters: [q('צבע'), q('צלילות')] },
+      { name: 'באף', weight: 2, parameters: [q('פגם'), q('עוצמה'), q('מורכבות')] },
+      {
+        name: 'בפה',
+        weight: 2,
+        parameters: [q('חמיצות'), q('עפיצות'), q('איזון'), q('סיומת'), q('אורך')],
+      },
+      {
+        name: 'כללי',
+        weight: 3,
+        parameters: [q('ייחודיות'), q('זניות'), q('אותנטיות'), q('ארצה שוב', 2)],
+      },
     ],
   },
   {
     id: 'meat',
     label: 'בשר',
     categories: [
-      { name: 'מרקם', weight: 1, parameters: [q('רכות'), q('עסיסיות')] },
-      { name: 'טעם', weight: 1, parameters: [q('עוצמת טעם'), q('תיבול')] },
-      { name: 'כללי', weight: 1, parameters: [q('איכות בישול'), q('מחיר לק"ג')] },
+      {
+        name: 'מראה חיצוני',
+        weight: 1,
+        parameters: [q('נראות הנתח'), q('אופן ההגשה'), q('יוצר גירוי')],
+      },
+      { name: 'ארומה וריח', weight: 1, parameters: [q('מעורר תיאבון'), q('ללא ריחות לוואי')] },
+      {
+        name: 'מרקם ועשייה',
+        weight: 1,
+        parameters: [q('נימוחות'), q('עסיסיות'), q('רמת עשייה נכונה')],
+      },
+      {
+        name: 'טעם כללי',
+        weight: 2,
+        parameters: [q('טעם הנתח'), q('רצון לחזור על החוויה'), q('תמורה למחיר לק"ג')],
+      },
     ],
   },
   {
     id: 'beer',
     label: 'בירה',
     categories: [
-      { name: 'מראה', weight: 1, parameters: [q('צבע'), q('קצף')] },
-      { name: 'ריח', weight: 1, parameters: [q('עוצמה'), q('ניחוחות')] },
-      { name: 'טעם', weight: 1, parameters: [q('מרירות'), q('מתיקות'), q('גוף')] },
-      { name: 'כללי', weight: 1, parameters: [q('רעננות'), q('איזון')] },
+      {
+        name: 'מראה וצלילות',
+        weight: 1,
+        parameters: [q('צבע וצלילות'), q('ראש הקצף'), q('אופן ההגשה וגירוי')],
+      },
+      { name: 'ארומה וריח', weight: 1, parameters: [q('עושר הניחוח'), q('ללא ריחות לוואי')] },
+      {
+        name: 'תחושת פה וגוף',
+        weight: 1,
+        parameters: [q('גוף וסמיכות'), q('גיזוז/קרבונציה'), q('טמפרטורת הגשה')],
+      },
+      {
+        name: 'טעם וחוויה כללית',
+        weight: 2,
+        parameters: [q('איזון הטעמים'), q('רצון לחזור על החוויה'), q('תמורה למחיר')],
+      },
     ],
   },
   {
@@ -60,6 +132,64 @@ export const EVENT_TEMPLATES: EventTemplate[] = [
       { name: 'ריח', weight: 1, parameters: [q('עוצמה'), q('ניחוחות')] },
       { name: 'טעם', weight: 1, parameters: [q('חמיצות'), q('מרירות'), q('גוף')] },
       { name: 'כללי', weight: 1, parameters: [q('איזון'), q('רצון לשוב אליו')] },
+    ],
+  },
+  {
+    id: 'wine_wset',
+    label: 'יין מקצועי (WSET)',
+    categories: [
+      {
+        name: 'מראה',
+        weight: 1,
+        parameters: [
+          single('בהירות', ['צלול', 'עכור']),
+          single('עוצמה', ['בהיר', 'בינוני', 'עמוק']),
+          single('צבע', [
+            'ירוק-לימון',
+            'לימון',
+            'זהב',
+            'ענבר',
+            'חום',
+            'ורוד',
+            'ורוד-כתום',
+            'כתום',
+            'סגול',
+            'אודם',
+            'גרנדה',
+            'חלודה',
+          ]),
+        ],
+      },
+      {
+        name: 'אף',
+        weight: 1,
+        parameters: [
+          single('מצב', ['נקי', 'לא נקי']),
+          single('עוצמה', ['קלה', 'בינונית', 'בולטת']),
+          multi('מאפייני ארומה', AROMA_OPTIONS),
+        ],
+      },
+      {
+        name: 'פה',
+        weight: 1,
+        parameters: [
+          single('מתיקות', ['יבש', 'כמעט יבש', 'בינוני', 'מתוק']),
+          single('חומציות', ['נמוכה', 'בינונית', 'גבוהה']),
+          single('טאנינים', ['נמוכים', 'בינוניים', 'גבוהים']),
+          single('אלכוהול', ['נמוך', 'בינוני', 'גבוה']),
+          single('גוף', ['קליל', 'בינוני', 'מלא']),
+          single('עוצמת טעם', ['קלה', 'בינונית', 'בולטת']),
+          multi('מאפייני טעם', AROMA_OPTIONS),
+          single('סיומת', ['קצרה', 'בינונית', 'ארוכה']),
+        ],
+      },
+      {
+        name: 'מסקנות',
+        weight: 1,
+        parameters: [
+          single('רמת איכות', ['פגום', 'חלש', 'מקובל', 'טוב', 'טוב מאוד', 'יוצא מן הכלל']),
+        ],
+      },
     ],
   },
 ]

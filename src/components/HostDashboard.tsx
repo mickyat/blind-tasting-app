@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { openResults } from '@/app/actions'
-import type { EventRow, ItemRow, ParameterRow, ParticipantRow } from '@/lib/types'
+import { countRequiredScores } from '@/lib/results'
+import type { CategoryRow, EventRow, ItemRow, ParameterRow, ParticipantRow } from '@/lib/types'
 
 interface Props {
   hostToken: string
   event: EventRow
   items: ItemRow[]
+  categories: CategoryRow[]
   parameters: ParameterRow[]
 }
 
@@ -18,7 +20,7 @@ const VISIBILITY_LABELS: Record<string, string> = {
   live: 'חי',
 }
 
-export default function HostDashboard({ hostToken, event, items, parameters }: Props) {
+export default function HostDashboard({ hostToken, event, items, categories, parameters }: Props) {
   const [supabase] = useState(() => createClient())
   const [participants, setParticipants] = useState<ParticipantRow[]>([])
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({})
@@ -26,7 +28,7 @@ export default function HostDashboard({ hostToken, event, items, parameters }: P
   const [opening, setOpening] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
 
-  const requiredScores = items.length * parameters.length
+  const requiredScores = countRequiredScores(items, categories, parameters)
 
   const refresh = useCallback(async () => {
     const { data: parts } = await supabase

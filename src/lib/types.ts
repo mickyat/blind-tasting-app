@@ -1,5 +1,6 @@
 export type ResultsVisibility = 'manual' | 'after_all_done' | 'live'
 export type EventTheme = 'default' | 'wine' | 'meat' | 'beer' | 'coffee'
+export type ParameterKind = 'scale' | 'checklist'
 
 export interface EventRow {
   id: string
@@ -12,16 +13,24 @@ export interface EventRow {
   created_at: string
 }
 
-export interface ItemRow {
+export interface ItemTypeRow {
   id: string
   event_id: string
+  name: string
+  template: string | null
+  sort_order: number
+}
+
+export interface ItemRow {
+  id: string
+  item_type_id: string
   label: string
   sort_order: number
 }
 
 export interface CategoryRow {
   id: string
-  event_id: string
+  item_type_id: string
   name: string
   weight: number
   sort_order: number
@@ -32,8 +41,11 @@ export interface ParameterRow {
   category_id: string
   name: string
   weight: number
-  scale_min: number
-  scale_max: number
+  kind: ParameterKind
+  scale_min: number | null
+  scale_max: number | null
+  options: string[] | null
+  multi_select: boolean
   sort_order: number
 }
 
@@ -51,4 +63,12 @@ export interface ScoreRow {
   item_id: string
   parameter_id: string
   value: number
+}
+
+export interface ChecklistAnswerRow {
+  id: string
+  participant_id: string
+  item_id: string
+  parameter_id: string
+  option: string
 }

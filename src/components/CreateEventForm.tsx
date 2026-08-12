@@ -3,15 +3,19 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createEvent, uploadEventLogo } from '@/app/actions'
-import type { EventTheme, ResultsVisibility } from '@/lib/types'
+import type { EventTheme, ParameterKind, ResultsVisibility } from '@/lib/types'
 import { THEME_STYLES } from '@/lib/theme'
-import { EVENT_TEMPLATES } from '@/lib/templates'
+import { EVENT_TEMPLATES, type EventTemplate } from '@/lib/templates'
+import { saveMyEvent } from '@/components/MyEvents'
 
 interface ParameterDraft {
   name: string
   weight: number
+  kind: ParameterKind
   scaleMin: number
   scaleMax: number
+  options: string[]
+  multiSelect: boolean
 }
 
 interface CategoryDraft {
@@ -20,12 +24,62 @@ interface CategoryDraft {
   parameters: ParameterDraft[]
 }
 
+interface ItemTypeDraft {
+  name: string
+  template: string | null
+  items: string[]
+  categories: CategoryDraft[]
+}
+
 function emptyParameter(): ParameterDraft {
-  return { name: '', weight: 5, scaleMin: 1, scaleMax: 5 }
+  return { name: '', weight: 5, kind: 'scale', scaleMin: 1, scaleMax: 5, options: [], multiSelect: false }
 }
 
 function emptyCategory(): CategoryDraft {
   return { name: '', weight: 5, parameters: [emptyParameter()] }
+}
+
+function emptyItemType(): ItemTypeDraft {
+  return { name: '', template: null, items: ['', ''], categories: [emptyCategory()] }
+}
+
+function templateToItemType(template: EventTemplate): ItemTypeDraft {
+  return {
+    name: template.label,
+    template: template.id,
+    items: ['', ''],
+    categories: template.categories.map((c) => ({
+      name: c.name,
+      weight: c.weight,
+      parameters: c.parameters.map((p) =>
+        p.kind === 'scale'
+          ? {
+              name: p.name,
+              weight: p.weight,
+              kind: 'scale' as const,
+              scaleMin: p.scaleMin,
+              scaleMax: p.scaleMax,
+              options: [],
+              multiSelect: false,
+            }
+          : {
+              name: p.name,
+              weight: p.weight,
+              kind: 'checklist' as const,
+              scaleMin: 1,
+              scaleMax: 5,
+              options: [...p.options],
+              multiSelect: p.multiSelect,
+            }
+      ),
+    })),
+  }
+}
+
+function themeForTemplate(templateId: string): EventTheme {
+  if (templateId === 'wine' || templateId === 'wine_wset') return 'wine'
+  if (templateId === 'meat' || templateId === 'beer' || templateId === 'coffee') return templateId
+  return 'default'
 }
 
 const VISIBILITY_OPTIONS: { value: ResultsVisibility; label: string; hint: string }[] = [
@@ -39,8 +93,7 @@ export default function CreateEventForm() {
   const [step, setStep] = useState<'template' | 'form'>('template')
   const [theme, setTheme] = useState<EventTheme>('default')
   const [title, setTitle] = useState('')
-  const [items, setItems] = useState(['', ''])
-  const [categories, setCategories] = useState<CategoryDraft[]>([emptyCategory()])
+  const [itemTypes, setItemTypes] = useState<ItemTypeDraft[]>([emptyItemType()])
   const [visibility, setVisibility] = useState<ResultsVisibility>('manual')
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoUploading, setLogoUploading] = useState(false)
@@ -48,23 +101,17 @@ export default function CreateEventForm() {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
-  function chooseTemplate(templateId: EventTheme) {
+  function chooseTemplate(templateId: string) {
     const template = EVENT_TEMPLATES.find((t) => t.id === templateId)
     if (template) {
-      setCategories(
-        template.categories.map((c) => ({
-          name: c.name,
-          weight: c.weight,
-          parameters: c.parameters.map((p) => ({ ...p })),
-        }))
-      )
-      setTheme(template.id)
+      setItemTypes([templateToItemType(template)])
+      setTheme(themeForTemplate(template.id))
     }
     setStep('form')
   }
 
   function startFromScratch() {
-    setCategories([emptyCategory()])
+    setItemTypes([emptyItemType()])
     setTheme('default')
     setStep('form')
   }
@@ -89,46 +136,146 @@ export default function CreateEventForm() {
     setLogoUrl(result.url)
   }
 
-  function updateItem(i: number, value: string) {
-    setItems((prev) => prev.map((v, idx) => (idx === i ? value : v)))
+  function updateItemType(ti: number, patch: Partial<ItemTypeDraft>) {
+    setItemTypes((prev) => prev.map((t, idx) => (idx === ti ? { ...t, ...patch } : t)))
   }
-  function addItem() {
-    setItems((prev) => [...prev, ''])
+  function addItemType() {
+    setItemTypes((prev) => [...prev, emptyItemType()])
   }
-  function removeItem(i: number) {
-    setItems((prev) => prev.filter((_, idx) => idx !== i))
+  function removeItemType(ti: number) {
+    setItemTypes((prev) => prev.filter((_, idx) => idx !== ti))
+  }
+  function applyTemplateToItemType(ti: number, template: EventTemplate) {
+    setItemTypes((prev) =>
+      prev.map((t, idx) => {
+        if (idx !== ti) return t
+        const fromTemplate = templateToItemType(template)
+        return { ...t, name: t.name || fromTemplate.name, template: template.id, categories: fromTemplate.categories }
+      })
+    )
   }
 
-  function updateCategory(ci: number, patch: Partial<CategoryDraft>) {
-    setCategories((prev) => prev.map((c, idx) => (idx === ci ? { ...c, ...patch } : c)))
-  }
-  function addCategory() {
-    setCategories((prev) => [...prev, emptyCategory()])
-  }
-  function removeCategory(ci: number) {
-    setCategories((prev) => prev.filter((_, idx) => idx !== ci))
-  }
-
-  function updateParameter(ci: number, pi: number, patch: Partial<ParameterDraft>) {
-    setCategories((prev) =>
-      prev.map((c, idx) =>
-        idx === ci
-          ? { ...c, parameters: c.parameters.map((p, j) => (j === pi ? { ...p, ...patch } : p)) }
-          : c
+  function updateItemTypeItem(ti: number, i: number, value: string) {
+    setItemTypes((prev) =>
+      prev.map((t, idx) =>
+        idx === ti ? { ...t, items: t.items.map((v, j) => (j === i ? value : v)) } : t
       )
     )
   }
-  function addParameter(ci: number) {
-    setCategories((prev) =>
-      prev.map((c, idx) => (idx === ci ? { ...c, parameters: [...c.parameters, emptyParameter()] } : c))
+  function addItemTypeItem(ti: number) {
+    setItemTypes((prev) => prev.map((t, idx) => (idx === ti ? { ...t, items: [...t.items, ''] } : t)))
+  }
+  function removeItemTypeItem(ti: number, i: number) {
+    setItemTypes((prev) =>
+      prev.map((t, idx) => (idx === ti ? { ...t, items: t.items.filter((_, j) => j !== i) } : t))
     )
   }
-  function removeParameter(ci: number, pi: number) {
-    setCategories((prev) =>
-      prev.map((c, idx) =>
-        idx === ci ? { ...c, parameters: c.parameters.filter((_, j) => j !== pi) } : c
+
+  function updateCategory(ti: number, ci: number, patch: Partial<CategoryDraft>) {
+    setItemTypes((prev) =>
+      prev.map((t, ti2) =>
+        ti2 === ti
+          ? { ...t, categories: t.categories.map((c, idx) => (idx === ci ? { ...c, ...patch } : c)) }
+          : t
       )
     )
+  }
+  function addCategory(ti: number) {
+    setItemTypes((prev) =>
+      prev.map((t, idx) => (idx === ti ? { ...t, categories: [...t.categories, emptyCategory()] } : t))
+    )
+  }
+  function removeCategory(ti: number, ci: number) {
+    setItemTypes((prev) =>
+      prev.map((t, idx) =>
+        idx === ti ? { ...t, categories: t.categories.filter((_, j) => j !== ci) } : t
+      )
+    )
+  }
+
+  function updateParameter(ti: number, ci: number, pi: number, patch: Partial<ParameterDraft>) {
+    setItemTypes((prev) =>
+      prev.map((t, ti2) =>
+        ti2 === ti
+          ? {
+              ...t,
+              categories: t.categories.map((c, ci2) =>
+                ci2 === ci
+                  ? { ...c, parameters: c.parameters.map((p, j) => (j === pi ? { ...p, ...patch } : p)) }
+                  : c
+              ),
+            }
+          : t
+      )
+    )
+  }
+  function addParameter(ti: number, ci: number) {
+    setItemTypes((prev) =>
+      prev.map((t, ti2) =>
+        ti2 === ti
+          ? {
+              ...t,
+              categories: t.categories.map((c, idx) =>
+                idx === ci ? { ...c, parameters: [...c.parameters, emptyParameter()] } : c
+              ),
+            }
+          : t
+      )
+    )
+  }
+  function removeParameter(ti: number, ci: number, pi: number) {
+    setItemTypes((prev) =>
+      prev.map((t, ti2) =>
+        ti2 === ti
+          ? {
+              ...t,
+              categories: t.categories.map((c, idx) =>
+                idx === ci ? { ...c, parameters: c.parameters.filter((_, j) => j !== pi) } : c
+              ),
+            }
+          : t
+      )
+    )
+  }
+
+  function setParameterKind(ti: number, ci: number, pi: number, kind: ParameterKind) {
+    updateParameter(
+      ti,
+      ci,
+      pi,
+      kind === 'scale' ? { kind, scaleMin: 1, scaleMax: 5 } : { kind, options: [''], multiSelect: false }
+    )
+  }
+
+  function updateOption(ti: number, ci: number, pi: number, oi: number, value: string) {
+    setItemTypes((prev) =>
+      prev.map((t, ti2) =>
+        ti2 === ti
+          ? {
+              ...t,
+              categories: t.categories.map((c, ci2) =>
+                ci2 === ci
+                  ? {
+                      ...c,
+                      parameters: c.parameters.map((p, pi2) =>
+                        pi2 === pi ? { ...p, options: p.options.map((o, k) => (k === oi ? value : o)) } : p
+                      ),
+                    }
+                  : c
+              ),
+            }
+          : t
+      )
+    )
+  }
+  function addOption(ti: number, ci: number, pi: number) {
+    updateParameter(ti, ci, pi, {
+      options: [...itemTypes[ti].categories[ci].parameters[pi].options, ''],
+    })
+  }
+  function removeOption(ti: number, ci: number, pi: number, oi: number) {
+    const current = itemTypes[ti].categories[ci].parameters[pi].options
+    updateParameter(ti, ci, pi, { options: current.filter((_, k) => k !== oi) })
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -138,10 +285,22 @@ export default function CreateEventForm() {
       const result = await createEvent({
         title,
         resultsVisibility: visibility,
-        items,
-        categories,
         theme,
         logoUrl,
+        itemTypes: itemTypes.map((t) => ({
+          name: t.name,
+          template: t.template,
+          items: t.items,
+          categories: t.categories.map((c) => ({
+            name: c.name,
+            weight: c.weight,
+            parameters: c.parameters.map((p) =>
+              p.kind === 'scale'
+                ? { name: p.name, weight: p.weight, kind: 'scale' as const, scaleMin: p.scaleMin, scaleMax: p.scaleMax }
+                : { name: p.name, weight: p.weight, kind: 'checklist' as const, options: p.options, multiSelect: p.multiSelect }
+            ),
+          })),
+        })),
       })
       if ('error' in result && result.error) {
         setError(result.error)
@@ -151,6 +310,7 @@ export default function CreateEventForm() {
         setError('שגיאה לא צפויה, נסה שוב')
         return
       }
+      saveMyEvent({ title, hostToken: result.hostToken, createdAt: new Date().toISOString() })
       router.push(`/host/${result.hostToken}`)
     })
   }
@@ -165,9 +325,11 @@ export default function CreateEventForm() {
               key={t.id}
               type="button"
               onClick={() => chooseTemplate(t.id)}
-              className={`flex flex-col items-center gap-1 rounded-xl border border-zinc-300 p-4 text-center font-medium ${THEME_STYLES[t.id].bg}`}
+              className={`flex flex-col items-center gap-1 rounded-xl border border-zinc-300 p-4 text-center font-medium ${THEME_STYLES[themeForTemplate(t.id)].bg}`}
             >
-              <span className={`text-base font-semibold ${THEME_STYLES[t.id].accent}`}>{t.label}</span>
+              <span className={`text-base font-semibold ${THEME_STYLES[themeForTemplate(t.id)].accent}`}>
+                {t.label}
+              </span>
               <span className="text-xs font-normal text-zinc-500">תבנית מוכנה</span>
             </button>
           ))}
@@ -204,7 +366,7 @@ export default function CreateEventForm() {
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="למשל: הטעימת יינות אדומים"
+          placeholder="למשל: ערב הטעימות"
           className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
           required
         />
@@ -237,147 +399,256 @@ export default function CreateEventForm() {
         {logoError && <p className="text-xs text-red-600">{logoError}</p>}
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-zinc-700">פריטים להטעימה</h2>
-        <div className="flex flex-col gap-2">
-          {items.map((item, i) => (
-            <div key={i} className="flex items-center gap-2">
+      <section className="flex flex-col gap-4">
+        <h2 className="text-sm font-medium text-zinc-700">סוגי פריט</h2>
+        {itemTypes.map((itemType, ti) => (
+          <div key={ti} className="flex flex-col gap-4 rounded-2xl border-2 border-zinc-400 bg-white p-4">
+            <div className="flex items-center gap-2">
               <input
-                value={item}
-                onChange={(e) => updateItem(i, e.target.value)}
-                placeholder={`פריט ${i + 1} (למשל: יין מספר ${i + 1})`}
-                className="min-w-0 flex-1 rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
+                value={itemType.name}
+                onChange={(e) => updateItemType(ti, { name: e.target.value })}
+                placeholder={`סוג פריט ${ti + 1} (למשל: יין)`}
+                className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base font-semibold focus:border-zinc-500 focus:outline-none"
                 required
               />
               <button
                 type="button"
-                onClick={() => removeItem(i)}
-                disabled={items.length <= 2}
-                aria-label="הסר פריט"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                onClick={() => removeItemType(ti)}
+                disabled={itemTypes.length <= 1}
+                aria-label="הסר סוג פריט"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
               >
                 ✕
               </button>
             </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={addItem}
-          className="self-start rounded-xl border border-dashed border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-600"
-        >
-          + הוסף פריט
-        </button>
-      </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-zinc-700">קטגוריות ותת-שאלות</h2>
-        <div className="flex flex-col gap-4">
-          {categories.map((category, ci) => (
-            <div key={ci} className="flex flex-col gap-3 rounded-xl border border-zinc-400 bg-white p-4">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              <span className="self-center text-xs text-zinc-500">מלא מתבנית:</span>
+              {EVENT_TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => applyTemplateToItemType(ti, t)}
+                  className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600"
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <h3 className="text-xs font-medium text-zinc-500">פריטים ({itemType.name || 'סוג זה'})</h3>
+              {itemType.items.map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
                   <input
-                    value={category.name}
-                    onChange={(e) => updateCategory(ci, { name: e.target.value })}
-                    placeholder={`קטגוריה ${ci + 1} (למשל: אף)`}
-                    className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base font-medium focus:border-zinc-500 focus:outline-none"
+                    value={item}
+                    onChange={(e) => updateItemTypeItem(ti, i, e.target.value)}
+                    placeholder={`פריט ${i + 1}`}
+                    className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => removeCategory(ci)}
-                    disabled={categories.length <= 1}
-                    aria-label="הסר קטגוריה"
+                    onClick={() => removeItemTypeItem(ti, i)}
+                    disabled={itemType.items.length <= 2}
+                    aria-label="הסר פריט"
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
                   >
                     ✕
                   </button>
                 </div>
-                <label className="flex items-center gap-2 text-xs text-zinc-500">
-                  משקל קטגוריה
-                  <input
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={category.weight}
-                    onChange={(e) => updateCategory(ci, { weight: Number(e.target.value) })}
-                    className="w-20 shrink-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                  />
-                </label>
-              </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => addItemTypeItem(ti)}
+                className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1.5 text-xs font-medium text-zinc-600"
+              >
+                + הוסף פריט
+              </button>
+            </div>
 
-              <div className="flex flex-col gap-2 border-r-2 border-zinc-200 pr-3">
-                {category.parameters.map((p, pi) => (
-                  <div key={pi} className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+            <div className="flex flex-col gap-3">
+              <h3 className="text-xs font-medium text-zinc-500">קטגוריות ותת-שאלות</h3>
+              {itemType.categories.map((category, ci) => (
+                <div key={ci} className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-zinc-50 p-3">
+                  <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                       <input
-                        value={p.name}
-                        onChange={(e) => updateParameter(ci, pi, { name: e.target.value })}
-                        placeholder={`תת-שאלה ${pi + 1} (למשל: עוצמה)`}
-                        className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                        value={category.name}
+                        onChange={(e) => updateCategory(ti, ci, { name: e.target.value })}
+                        placeholder={`קטגוריה ${ci + 1} (למשל: אף)`}
+                        className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base font-medium focus:border-zinc-500 focus:outline-none"
                         required
                       />
                       <button
                         type="button"
-                        onClick={() => removeParameter(ci, pi)}
-                        disabled={category.parameters.length <= 1}
-                        aria-label="הסר תת-שאלה"
+                        onClick={() => removeCategory(ti, ci)}
+                        disabled={itemType.categories.length <= 1}
+                        aria-label="הסר קטגוריה"
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
                       >
                         ✕
                       </button>
                     </div>
-                    <label className="flex flex-col gap-1 text-xs text-zinc-500">
-                      משקל
+                    <label className="flex items-center gap-2 text-xs text-zinc-500">
+                      משקל קטגוריה
                       <input
                         type="number"
                         min={0}
                         step="any"
-                        value={p.weight}
-                        onChange={(e) => updateParameter(ci, pi, { weight: Number(e.target.value) })}
-                        className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                        value={category.weight}
+                        onChange={(e) => updateCategory(ti, ci, { weight: Number(e.target.value) })}
+                        className="w-20 shrink-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
                       />
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500">
-                        סולם מ-
-                        <input
-                          type="number"
-                          value={p.scaleMin}
-                          onChange={(e) => updateParameter(ci, pi, { scaleMin: Number(e.target.value) })}
-                          className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                        />
-                      </label>
-                      <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500">
-                        סולם עד
-                        <input
-                          type="number"
-                          value={p.scaleMax}
-                          onChange={(e) => updateParameter(ci, pi, { scaleMax: Number(e.target.value) })}
-                          className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                        />
-                      </label>
-                    </div>
                   </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => addParameter(ci)}
-                  className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1.5 text-xs font-medium text-zinc-600"
-                >
-                  + הוסף תת-שאלה
-                </button>
-              </div>
+
+                  <div className="flex flex-col gap-2 border-r-2 border-zinc-200 pr-3">
+                    {category.parameters.map((p, pi) => (
+                      <div key={pi} className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3">
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={p.name}
+                            onChange={(e) => updateParameter(ti, ci, pi, { name: e.target.value })}
+                            placeholder={`תת-שאלה ${pi + 1}`}
+                            className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeParameter(ti, ci, pi)}
+                            disabled={category.parameters.length <= 1}
+                            aria-label="הסר תת-שאלה"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setParameterKind(ti, ci, pi, 'scale')}
+                            className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${
+                              p.kind === 'scale' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 text-zinc-600'
+                            }`}
+                          >
+                            סולם מספרי
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setParameterKind(ti, ci, pi, 'checklist')}
+                            className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${
+                              p.kind === 'checklist' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 text-zinc-600'
+                            }`}
+                          >
+                            רשימת אפשרויות
+                          </button>
+                        </div>
+
+                        {p.kind === 'scale' ? (
+                          <>
+                            <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                              משקל
+                              <input
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={p.weight}
+                                onChange={(e) => updateParameter(ti, ci, pi, { weight: Number(e.target.value) })}
+                                className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                              />
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500">
+                                סולם מ-
+                                <input
+                                  type="number"
+                                  value={p.scaleMin}
+                                  onChange={(e) => updateParameter(ti, ci, pi, { scaleMin: Number(e.target.value) })}
+                                  className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                                />
+                              </label>
+                              <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500">
+                                סולם עד
+                                <input
+                                  type="number"
+                                  value={p.scaleMax}
+                                  onChange={(e) => updateParameter(ti, ci, pi, { scaleMax: Number(e.target.value) })}
+                                  className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                                />
+                              </label>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            <label className="flex items-center gap-2 text-xs text-zinc-500">
+                              <input
+                                type="checkbox"
+                                checked={p.multiSelect}
+                                onChange={(e) => updateParameter(ti, ci, pi, { multiSelect: e.target.checked })}
+                              />
+                              אפשר בחירה מרובה
+                            </label>
+                            <div className="flex flex-col gap-1.5">
+                              {p.options.map((opt, oi) => (
+                                <div key={oi} className="flex items-center gap-2">
+                                  <input
+                                    value={opt}
+                                    onChange={(e) => updateOption(ti, ci, pi, oi, e.target.value)}
+                                    placeholder={`אפשרות ${oi + 1}`}
+                                    className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-2 py-1.5 text-sm focus:border-zinc-500 focus:outline-none"
+                                    required
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeOption(ti, ci, pi, oi)}
+                                    disabled={p.options.length <= 1}
+                                    aria-label="הסר אפשרות"
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => addOption(ti, ci, pi)}
+                                className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1 text-xs font-medium text-zinc-600"
+                              >
+                                + הוסף אפשרות
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => addParameter(ti, ci)}
+                      className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1.5 text-xs font-medium text-zinc-600"
+                    >
+                      + הוסף תת-שאלה
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => addCategory(ti)}
+                className="self-start rounded-xl border border-dashed border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-600"
+              >
+                + הוסף קטגוריה
+              </button>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
         <button
           type="button"
-          onClick={addCategory}
-          className="self-start rounded-xl border border-dashed border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-600"
+          onClick={addItemType}
+          className="self-start rounded-xl border border-dashed border-zinc-500 px-4 py-2 text-sm font-medium text-zinc-700"
         >
-          + הוסף קטגוריה
+          + הוסף סוג פריט (למשל: גם בשר לצד היין)
         </button>
       </section>
 
@@ -406,9 +677,7 @@ export default function CreateEventForm() {
         </div>
       </section>
 
-      {error && (
-        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
-      )}
+      {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
       <button
         type="submit"

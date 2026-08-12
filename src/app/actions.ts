@@ -1,13 +1,16 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { EventTheme, ResultsVisibility } from '@/lib/types'
+import type { EventTheme, ParameterKind, ResultsVisibility } from '@/lib/types'
 
 interface ParameterInput {
   name: string
   weight: number
-  scaleMin: number
-  scaleMax: number
+  kind: ParameterKind
+  scaleMin?: number
+  scaleMax?: number
+  options?: string[]
+  multiSelect?: boolean
 }
 
 interface CategoryInput {
@@ -16,11 +19,17 @@ interface CategoryInput {
   parameters: ParameterInput[]
 }
 
+interface ItemTypeInput {
+  name: string
+  template: string | null
+  items: string[]
+  categories: CategoryInput[]
+}
+
 interface CreateEventInput {
   title: string
   resultsVisibility: ResultsVisibility
-  items: string[]
-  categories: CategoryInput[]
+  itemTypes: ItemTypeInput[]
   theme: EventTheme
   logoUrl: string | null
 }
@@ -58,31 +67,46 @@ export async function createEvent(input: CreateEventInput) {
   const title = input.title.trim()
   if (!title) return { error: 'צריך לתת שם לאירוע' }
 
-  const items = input.items.map((s) => s.trim()).filter(Boolean)
-  if (items.length < 2) return { error: 'צריך לפחות שני פריטים להטעימה' }
+  const itemTypes = input.itemTypes.map((t) => ({
+    name: t.name.trim(),
+    template: t.template,
+    items: t.items.map((s) => s.trim()).filter(Boolean),
+    categories: t.categories
+      .map((c) => ({
+        ...c,
+        name: c.name.trim(),
+        parameters: c.parameters
+          .map((p) => ({ ...p, name: p.name.trim() }))
+          .filter((p) => p.name),
+      }))
+      .filter((c) => c.name),
+  }))
 
-  const categories = input.categories
-    .map((c) => ({
-      ...c,
-      name: c.name.trim(),
-      parameters: c.parameters.map((p) => ({ ...p, name: p.name.trim() })).filter((p) => p.name),
-    }))
-    .filter((c) => c.name)
+  if (itemTypes.length === 0) return { error: 'צריך לפחות סוג פריט אחד' }
 
-  if (categories.length === 0) return { error: 'צריך לפחות קטגוריה אחת' }
-
-  for (const c of categories) {
-    if (!(c.weight > 0)) return { error: `משקל לא תקין עבור קטגוריה "${c.name}"` }
-    if (c.parameters.length === 0) {
-      return { error: `צריך לפחות תת-שאלה אחת בקטגוריה "${c.name}"` }
-    }
-    for (const p of c.parameters) {
-      if (!(p.weight > 0)) return { error: `משקל לא תקין עבור "${p.name}"` }
-      if (
-        !(Number.isFinite(p.scaleMin) && Number.isFinite(p.scaleMax)) ||
-        p.scaleMax <= p.scaleMin
-      ) {
-        return { error: `טווח סולם לא תקין עבור "${p.name}"` }
+  for (const t of itemTypes) {
+    if (!t.name) return { error: 'צריך שם לכל סוג פריט' }
+    if (t.items.length < 2) return { error: `צריך לפחות שני פריטים תחת "${t.name}"` }
+    if (t.categories.length === 0) return { error: `צריך לפחות קטגוריה אחת תחת "${t.name}"` }
+    for (const c of t.categories) {
+      if (!(c.weight > 0)) return { error: `משקל לא תקין עבור קטגוריה "${c.name}"` }
+      if (c.parameters.length === 0) {
+        return { error: `צריך לפחות תת-שאלה אחת בקטגוריה "${c.name}"` }
+      }
+      for (const p of c.parameters) {
+        if (p.kind === 'scale') {
+          if (!(p.weight > 0)) return { error: `משקל לא תקין עבור "${p.name}"` }
+          if (
+            !(Number.isFinite(p.scaleMin) && Number.isFinite(p.scaleMax)) ||
+            (p.scaleMax as number) <= (p.scaleMin as number)
+          ) {
+            return { error: `טווח סולם לא תקין עבור "${p.name}"` }
+          }
+        } else {
+          if (!p.options || p.options.filter((o) => o.trim()).length === 0) {
+            return { error: `צריך לפחות אפשרות אחת עבור "${p.name}"` }
+          }
+        }
       }
     }
   }
@@ -104,6 +128,10 @@ export async function createEvent(input: CreateEventInput) {
     return { error: 'שגיאה ביצירת האירוע, נסה שוב' }
   }
 
+  const rollback = async () => {
+    await supabase.from('event').delete().eq('id', event.id)
+  }
+
   const { data: admin, error: adminError } = await supabase
     .from('event_admin')
     .insert({ event_id: event.id })
@@ -111,49 +139,70 @@ export async function createEvent(input: CreateEventInput) {
     .single()
 
   if (adminError || !admin) {
-    await supabase.from('event').delete().eq('id', event.id)
+    await rollback()
     return { error: 'שגיאה ביצירת האירוע, נסה שוב' }
   }
 
-  const { error: itemsError } = await supabase.from('item').insert(
-    items.map((label, i) => ({ event_id: event.id, label, sort_order: i }))
-  )
-  if (itemsError) {
-    await supabase.from('event').delete().eq('id', event.id)
-    return { error: 'שגיאה בהוספת הפריטים, נסה שוב' }
-  }
-
-  const { data: categoryRows, error: categoriesError } = await supabase
-    .from('category')
+  const { data: itemTypeRows, error: itemTypeError } = await supabase
+    .from('item_type')
     .insert(
-      categories.map((c, i) => ({
+      itemTypes.map((t, i) => ({
         event_id: event.id,
-        name: c.name,
-        weight: c.weight,
+        name: t.name,
+        template: t.template,
         sort_order: i,
       }))
     )
     .select()
 
+  if (itemTypeError || !itemTypeRows) {
+    await rollback()
+    return { error: 'שגיאה בהוספת סוגי הפריט, נסה שוב' }
+  }
+
+  const itemRows = itemTypes.flatMap((t, i) =>
+    t.items.map((label, j) => ({ item_type_id: itemTypeRows[i].id, label, sort_order: j }))
+  )
+  const { error: itemsError } = await supabase.from('item').insert(itemRows)
+  if (itemsError) {
+    await rollback()
+    return { error: 'שגיאה בהוספת הפריטים, נסה שוב' }
+  }
+
+  const categoryPlan = itemTypes.flatMap((t, i) => t.categories.map((c) => ({ typeIndex: i, c })))
+  const { data: categoryRows, error: categoriesError } = await supabase
+    .from('category')
+    .insert(
+      categoryPlan.map(({ typeIndex, c }, idx) => ({
+        item_type_id: itemTypeRows[typeIndex].id,
+        name: c.name,
+        weight: c.weight,
+        sort_order: idx,
+      }))
+    )
+    .select()
+
   if (categoriesError || !categoryRows) {
-    await supabase.from('event').delete().eq('id', event.id)
+    await rollback()
     return { error: 'שגיאה בהוספת הקטגוריות, נסה שוב' }
   }
 
-  const parameterRows = categories.flatMap((c, i) =>
-    c.parameters.map((p, j) => ({
-      category_id: categoryRows[i].id,
+  const parameterPlan = categoryPlan.flatMap(({ c }, ci) => c.parameters.map((p) => ({ ci, p })))
+  const { error: paramsError } = await supabase.from('parameter').insert(
+    parameterPlan.map(({ ci, p }, idx) => ({
+      category_id: categoryRows[ci].id,
       name: p.name,
       weight: p.weight,
-      scale_min: p.scaleMin,
-      scale_max: p.scaleMax,
-      sort_order: j,
+      kind: p.kind,
+      scale_min: p.kind === 'scale' ? p.scaleMin : null,
+      scale_max: p.kind === 'scale' ? p.scaleMax : null,
+      options: p.kind === 'checklist' ? p.options : null,
+      multi_select: p.kind === 'checklist' ? !!p.multiSelect : false,
+      sort_order: idx,
     }))
   )
-
-  const { error: paramsError } = await supabase.from('parameter').insert(parameterRows)
   if (paramsError) {
-    await supabase.from('event').delete().eq('id', event.id)
+    await rollback()
     return { error: 'שגיאה בהוספת השאלות, נסה שוב' }
   }
 
