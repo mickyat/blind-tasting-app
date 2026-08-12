@@ -469,6 +469,10 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
       >
         למסך התוצאות
       </Link>
+
+      <Link href="/" className="text-center text-xs text-zinc-400 underline">
+        את/ה המארגן/ת של האירוע? חזרה לדף הבית
+      </Link>
     </div>
   )
 }
@@ -526,6 +530,9 @@ function JoinForm({
       >
         {pending ? 'מצטרף…' : 'הצטרף להטעימה'}
       </button>
+      <Link href="/" className="text-center text-xs text-zinc-400 underline">
+        את/ה המארגן/ת של האירוע? חזרה לדף הבית
+      </Link>
     </form>
   )
 }

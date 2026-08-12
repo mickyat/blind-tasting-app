@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { buildAnsweredSet, calculateResults, isItemDone, rankResults, type ItemResult } from '@/lib/results'
 import type {
@@ -92,6 +93,9 @@ export default function ResultsView({ event, itemTypes, items, categories, param
         ) : (
           <p className="text-base font-medium text-zinc-700">מחכים שהמארגן יפתח את התוצאות</p>
         )}
+        <Link href="/" className="text-xs text-zinc-400 underline">
+          את/ה המארגן/ת של האירוע? חזרה לדף הבית
+        </Link>
       </div>
     )
   }
@@ -125,6 +129,10 @@ export default function ResultsView({ event, itemTypes, items, categories, param
         checklistAnswers={checklistAnswers}
         participantCount={participants.length}
       />
+
+      <Link href="/" className="text-center text-xs text-zinc-400 underline">
+        את/ה המארגן/ת של האירוע? חזרה לדף הבית
+      </Link>
     </div>
   )
 }
