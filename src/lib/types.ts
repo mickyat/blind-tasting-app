@@ -73,3 +73,38 @@ export interface ChecklistAnswerRow {
   parameter_id: string
   option: string
 }
+
+export type ExternalCriterionCalcType = 'manual' | 'threshold' | 'options'
+
+export interface ThresholdRule {
+  max: number
+  score: number
+}
+
+export interface OptionRule {
+  label: string
+  score: number
+}
+
+export interface ExternalCriterionConfig {
+  thresholds?: ThresholdRule[]
+  defaultScore?: number
+  options?: OptionRule[]
+}
+
+export interface ExternalCriterionRow {
+  id: string
+  item_type_id: string
+  name: string
+  weight: number
+  calc_type: ExternalCriterionCalcType
+  config: ExternalCriterionConfig | null
+  sort_order: number
+}
+
+export interface ItemExternalValueRow {
+  id: string
+  item_id: string
+  criterion_id: string
+  raw_value: string | null
+}

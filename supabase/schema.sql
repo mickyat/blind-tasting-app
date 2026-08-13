@@ -93,6 +93,29 @@ create table parameter (
 );
 create index parameter_category_id_idx on parameter(category_id);
 
+-- Organizer-entered (not participant-scored) criterion per item type, e.g.
+-- price or local/imported. Enters the item's weighted final score at the
+-- same level as a category.
+create table external_criterion (
+  id uuid primary key default gen_random_uuid(),
+  item_type_id uuid not null references item_type(id) on delete cascade,
+  name text not null,
+  weight numeric not null default 1,
+  calc_type text not null default 'manual' check (calc_type in ('manual', 'threshold', 'options')),
+  config jsonb,
+  sort_order int not null default 0
+);
+create index external_criterion_item_type_id_idx on external_criterion(item_type_id);
+
+create table item_external_value (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid not null references item(id) on delete cascade,
+  criterion_id uuid not null references external_criterion(id) on delete cascade,
+  raw_value text,
+  unique (item_id, criterion_id)
+);
+create index item_external_value_item_id_idx on item_external_value(item_id);
+
 create table participant (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references event(id) on delete cascade,
@@ -145,6 +168,8 @@ alter table item_type enable row level security;
 alter table item enable row level security;
 alter table category enable row level security;
 alter table parameter enable row level security;
+alter table external_criterion enable row level security;
+alter table item_external_value enable row level security;
 alter table participant enable row level security;
 alter table score enable row level security;
 alter table checklist_answer enable row level security;
@@ -162,6 +187,12 @@ create policy "category readable by anyone" on category
   for select using (true);
 
 create policy "parameter readable by anyone" on parameter
+  for select using (true);
+
+create policy "external_criterion readable by anyone" on external_criterion
+  for select using (true);
+
+create policy "item_external_value readable by anyone" on item_external_value
   for select using (true);
 
 create policy "participant readable by anyone" on participant

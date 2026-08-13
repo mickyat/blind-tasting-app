@@ -3,11 +3,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { buildAnsweredSet, calculateResults, isItemDone, rankResults, type ItemResult } from '@/lib/results'
+import {
+  buildAnsweredSet,
+  calculateResults,
+  getItemDetail,
+  isItemDone,
+  rankResults,
+  type ItemDetail,
+  type ItemResult,
+} from '@/lib/results'
 import type {
   CategoryRow,
   ChecklistAnswerRow,
   EventRow,
+  ExternalCriterionRow,
+  ItemExternalValueRow,
   ItemRow,
   ItemTypeRow,
   ParameterRow,
@@ -21,9 +31,19 @@ interface Props {
   items: ItemRow[]
   categories: CategoryRow[]
   parameters: ParameterRow[]
+  externalCriteria: ExternalCriterionRow[]
+  externalValues: ItemExternalValueRow[]
 }
 
-export default function ResultsView({ event, itemTypes, items, categories, parameters }: Props) {
+export default function ResultsView({
+  event,
+  itemTypes,
+  items,
+  categories,
+  parameters,
+  externalCriteria,
+  externalValues,
+}: Props) {
   const [supabase] = useState(() => createClient())
   const [participants, setParticipants] = useState<ParticipantRow[]>([])
   const [scores, setScores] = useState<ScoreRow[]>([])
@@ -100,19 +120,36 @@ export default function ResultsView({ event, itemTypes, items, categories, param
     )
   }
 
-  const overallRanked = rankResults(calculateResults(openItems, categories, parameters, scores))
+  const overallRanked = rankResults(
+    calculateResults(openItems, categories, parameters, scores, externalCriteria, externalValues)
+  )
   const hasMultipleTypes = itemTypes.length > 1
+
+  const itemDetails = new Map(
+    openItems.map((item) => [
+      item.id,
+      getItemDetail(item, categories, parameters, scores, participants, externalCriteria, externalValues),
+    ])
+  )
 
   return (
     <div className="flex flex-col gap-8">
-      <RankingList title={hasMultipleTypes ? 'דירוג כללי' : undefined} results={overallRanked} />
+      <RankingList
+        title={hasMultipleTypes ? 'דירוג כללי' : undefined}
+        results={overallRanked}
+        itemDetails={itemDetails}
+      />
 
       {hasMultipleTypes &&
         itemTypes.map((t) => {
           const typeItems = openItems.filter((i) => i.item_type_id === t.id)
           if (typeItems.length === 0) return null
-          const typeRanked = rankResults(calculateResults(typeItems, categories, parameters, scores))
-          return <RankingList key={t.id} title={`דירוג ${t.name}`} results={typeRanked} />
+          const typeRanked = rankResults(
+            calculateResults(typeItems, categories, parameters, scores, externalCriteria, externalValues)
+          )
+          return (
+            <RankingList key={t.id} title={`דירוג ${t.name}`} results={typeRanked} itemDetails={itemDetails} />
+          )
         })}
 
       {pendingItems.length > 0 && (
@@ -137,34 +174,138 @@ export default function ResultsView({ event, itemTypes, items, categories, param
   )
 }
 
-function RankingList({ title, results }: { title?: string; results: ItemResult[] }) {
+function RankingList({
+  title,
+  results,
+  itemDetails,
+}: {
+  title?: string
+  results: ItemResult[]
+  itemDetails: Map<string, ItemDetail>
+}) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  function toggle(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {title && <h2 className="text-sm font-semibold text-zinc-700">{title}</h2>}
-      {results.map((r, i) => (
-        <div
-          key={r.item.id}
-          className={`flex items-center justify-between rounded-xl border p-4 ${
-            i === 0 ? 'border-amber-400 bg-amber-50' : 'border-zinc-300 bg-white'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-zinc-400">#{i + 1}</span>
-            <div className="flex flex-col">
-              <span className="text-base font-semibold text-zinc-900">
-                {i === 0 && '🏆 '}
-                {r.item.label}
-              </span>
-              {r.participantCount > 0 && (
-                <span className="text-xs text-zinc-500">{r.participantCount} דירוגים</span>
-              )}
+      {results.map((r, i) => {
+        const detail = itemDetails.get(r.item.id)
+        const hasDetail =
+          detail &&
+          (detail.categoryAverages.length > 0 ||
+            detail.externalContributions.length > 0 ||
+            detail.participantScores.length > 0)
+        const isOpen = expanded.has(r.item.id)
+        return (
+          <div
+            key={r.item.id}
+            className={`rounded-xl border p-4 ${i === 0 ? 'border-amber-400 bg-amber-50' : 'border-zinc-300 bg-white'}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-zinc-400">#{i + 1}</span>
+                <div className="flex flex-col">
+                  <span className="text-base font-semibold text-zinc-900">
+                    {i === 0 && '🏆 '}
+                    {r.item.label}
+                  </span>
+                  {r.participantCount > 0 && (
+                    <span className="text-xs text-zinc-500">{r.participantCount} דירוגים</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-bold text-zinc-900">
+                  {r.finalScore !== null ? r.finalScore.toFixed(2) : '—'}
+                </span>
+                {hasDetail && (
+                  <button
+                    type="button"
+                    onClick={() => toggle(r.item.id)}
+                    className="shrink-0 text-xs font-medium text-zinc-500 underline"
+                  >
+                    {isOpen ? 'הסתר פירוט' : 'הצג פירוט'}
+                  </button>
+                )}
+              </div>
             </div>
+            {isOpen && detail && <ItemDetailView detail={detail} />}
           </div>
-          <span className="text-lg font-bold text-zinc-900">
-            {r.finalScore !== null ? r.finalScore.toFixed(2) : '—'}
-          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+function ItemDetailView({ detail }: { detail: ItemDetail }) {
+  return (
+    <div className="mt-3 flex flex-col gap-3 border-t border-zinc-200 pt-3">
+      {detail.categoryAverages.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-zinc-500">ציון ממוצע לפי קטגוריה</span>
+          <ul className="flex flex-col gap-0.5">
+            {detail.categoryAverages.map((ca) => (
+              <li key={ca.category.id} className="flex items-center justify-between text-sm">
+                <span className="text-zinc-700">
+                  {ca.category.name} <span className="text-xs text-zinc-400">(משקל {ca.category.weight})</span>
+                </span>
+                <span className="font-medium text-zinc-900">{ca.averageScore.toFixed(2)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-      ))}
+      )}
+
+      {detail.externalContributions.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-zinc-500">קריטריונים חיצוניים</span>
+          <ul className="flex flex-col gap-0.5">
+            {detail.externalContributions.map((ec) => (
+              <li key={ec.criterion.id} className="flex items-center justify-between text-sm">
+                <span className="text-zinc-700">
+                  {ec.criterion.name}{' '}
+                  <span className="text-xs text-zinc-400">
+                    (משקל {ec.criterion.weight}
+                    {ec.rawValue ? `, ערך: ${ec.rawValue}` : ''})
+                  </span>
+                </span>
+                <span className="font-medium text-zinc-900">{ec.score !== null ? ec.score.toFixed(2) : '—'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {detail.participantScores.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-zinc-500">ציון לפי משתתף</span>
+          <ul className="flex flex-col gap-0.5">
+            {detail.participantScores.map((ps) => (
+              <li key={ps.participant.id} className="flex items-center justify-between text-sm">
+                <span className="text-zinc-700">{ps.participant.nickname}</span>
+                <span className="font-medium text-zinc-900">{ps.score.toFixed(2)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {detail.closest && (
+        <p className="text-xs text-zinc-500">
+          הכי קרוב לממוצע:{' '}
+          <span className="font-medium text-zinc-700">{detail.closest.participant.nickname}</span> (
+          {detail.closest.score.toFixed(2)})
+        </p>
+      )}
     </div>
   )
 }

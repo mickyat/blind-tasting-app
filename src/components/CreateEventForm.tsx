@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createEvent, uploadEventLogo } from '@/app/actions'
-import type { EventTheme, ParameterKind, ResultsVisibility } from '@/lib/types'
+import type { EventTheme, ExternalCriterionCalcType, ParameterKind, ResultsVisibility } from '@/lib/types'
 import { THEME_STYLES } from '@/lib/theme'
 import { EVENT_TEMPLATES, type EventTemplate } from '@/lib/templates'
 import { saveMyEvent } from '@/components/MyEvents'
@@ -24,11 +24,36 @@ interface CategoryDraft {
   parameters: ParameterDraft[]
 }
 
+interface ThresholdDraft {
+  max: number
+  score: number
+}
+
+interface OptionRuleDraft {
+  label: string
+  score: number
+}
+
+interface ExternalCriterionDraft {
+  name: string
+  weight: number
+  calcType: ExternalCriterionCalcType
+  thresholds: ThresholdDraft[]
+  defaultScore: number
+  options: OptionRuleDraft[]
+}
+
+interface ItemDraft {
+  label: string
+  externalValues: Record<number, string>
+}
+
 interface ItemTypeDraft {
   name: string
   template: string | null
-  items: string[]
+  items: ItemDraft[]
   categories: CategoryDraft[]
+  externalCriteria: ExternalCriterionDraft[]
 }
 
 function emptyParameter(): ParameterDraft {
@@ -39,15 +64,31 @@ function emptyCategory(): CategoryDraft {
   return { name: '', weight: 5, parameters: [emptyParameter()] }
 }
 
+function emptyItem(): ItemDraft {
+  return { label: '', externalValues: {} }
+}
+
+function emptyExternalCriterion(): ExternalCriterionDraft {
+  return {
+    name: '',
+    weight: 5,
+    calcType: 'manual',
+    thresholds: [{ max: 0, score: 5 }],
+    defaultScore: 1,
+    options: [{ label: '', score: 5 }],
+  }
+}
+
 function emptyItemType(): ItemTypeDraft {
-  return { name: '', template: null, items: ['', ''], categories: [emptyCategory()] }
+  return { name: '', template: null, items: [emptyItem(), emptyItem()], categories: [emptyCategory()], externalCriteria: [] }
 }
 
 function templateToItemType(template: EventTemplate): ItemTypeDraft {
   return {
     name: template.label,
     template: template.id,
-    items: ['', ''],
+    items: [emptyItem(), emptyItem()],
+    externalCriteria: [],
     categories: template.categories.map((c) => ({
       name: c.name,
       weight: c.weight,
@@ -155,20 +196,99 @@ export default function CreateEventForm() {
     )
   }
 
-  function updateItemTypeItem(ti: number, i: number, value: string) {
+  function updateItemTypeItem(ti: number, i: number, patch: Partial<ItemDraft>) {
     setItemTypes((prev) =>
       prev.map((t, idx) =>
-        idx === ti ? { ...t, items: t.items.map((v, j) => (j === i ? value : v)) } : t
+        idx === ti ? { ...t, items: t.items.map((v, j) => (j === i ? { ...v, ...patch } : v)) } : t
       )
     )
   }
   function addItemTypeItem(ti: number) {
-    setItemTypes((prev) => prev.map((t, idx) => (idx === ti ? { ...t, items: [...t.items, ''] } : t)))
+    setItemTypes((prev) => prev.map((t, idx) => (idx === ti ? { ...t, items: [...t.items, emptyItem()] } : t)))
   }
   function removeItemTypeItem(ti: number, i: number) {
     setItemTypes((prev) =>
       prev.map((t, idx) => (idx === ti ? { ...t, items: t.items.filter((_, j) => j !== i) } : t))
     )
+  }
+  function updateItemExternalValue(ti: number, i: number, criterionIndex: number, value: string) {
+    setItemTypes((prev) =>
+      prev.map((t, idx) =>
+        idx === ti
+          ? {
+              ...t,
+              items: t.items.map((it, j) =>
+                j === i ? { ...it, externalValues: { ...it.externalValues, [criterionIndex]: value } } : it
+              ),
+            }
+          : t
+      )
+    )
+  }
+
+  function updateExternalCriterion(ti: number, ei: number, patch: Partial<ExternalCriterionDraft>) {
+    setItemTypes((prev) =>
+      prev.map((t, idx) =>
+        idx === ti
+          ? { ...t, externalCriteria: t.externalCriteria.map((c, j) => (j === ei ? { ...c, ...patch } : c)) }
+          : t
+      )
+    )
+  }
+  function addExternalCriterion(ti: number) {
+    setItemTypes((prev) =>
+      prev.map((t, idx) =>
+        idx === ti ? { ...t, externalCriteria: [...t.externalCriteria, emptyExternalCriterion()] } : t
+      )
+    )
+  }
+  function removeExternalCriterion(ti: number, ei: number) {
+    setItemTypes((prev) =>
+      prev.map((t, idx) => {
+        if (idx !== ti) return t
+        const externalCriteria = t.externalCriteria.filter((_, j) => j !== ei)
+        const items = t.items.map((it) => {
+          const externalValues: Record<number, string> = {}
+          for (const [kStr, v] of Object.entries(it.externalValues)) {
+            const k = Number(kStr)
+            if (k === ei) continue
+            externalValues[k > ei ? k - 1 : k] = v
+          }
+          return { ...it, externalValues }
+        })
+        return { ...t, externalCriteria, items }
+      })
+    )
+  }
+  function updateThreshold(ti: number, ei: number, thi: number, patch: Partial<ThresholdDraft>) {
+    updateExternalCriterion(ti, ei, {
+      thresholds: itemTypes[ti].externalCriteria[ei].thresholds.map((th, j) => (j === thi ? { ...th, ...patch } : th)),
+    })
+  }
+  function addThreshold(ti: number, ei: number) {
+    updateExternalCriterion(ti, ei, {
+      thresholds: [...itemTypes[ti].externalCriteria[ei].thresholds, { max: 0, score: 1 }],
+    })
+  }
+  function removeThreshold(ti: number, ei: number, thi: number) {
+    updateExternalCriterion(ti, ei, {
+      thresholds: itemTypes[ti].externalCriteria[ei].thresholds.filter((_, j) => j !== thi),
+    })
+  }
+  function updateCriterionOption(ti: number, ei: number, oi: number, patch: Partial<OptionRuleDraft>) {
+    updateExternalCriterion(ti, ei, {
+      options: itemTypes[ti].externalCriteria[ei].options.map((o, j) => (j === oi ? { ...o, ...patch } : o)),
+    })
+  }
+  function addCriterionOption(ti: number, ei: number) {
+    updateExternalCriterion(ti, ei, {
+      options: [...itemTypes[ti].externalCriteria[ei].options, { label: '', score: 5 }],
+    })
+  }
+  function removeCriterionOption(ti: number, ei: number, oi: number) {
+    updateExternalCriterion(ti, ei, {
+      options: itemTypes[ti].externalCriteria[ei].options.filter((_, j) => j !== oi),
+    })
   }
 
   function updateCategory(ti: number, ci: number, patch: Partial<CategoryDraft>) {
@@ -290,7 +410,7 @@ export default function CreateEventForm() {
         itemTypes: itemTypes.map((t) => ({
           name: t.name,
           template: t.template,
-          items: t.items,
+          items: t.items.map((it) => ({ label: it.label, externalValues: it.externalValues })),
           categories: t.categories.map((c) => ({
             name: c.name,
             weight: c.weight,
@@ -299,6 +419,14 @@ export default function CreateEventForm() {
                 ? { name: p.name, weight: p.weight, kind: 'scale' as const, scaleMin: p.scaleMin, scaleMax: p.scaleMax }
                 : { name: p.name, weight: p.weight, kind: 'checklist' as const, options: p.options, multiSelect: p.multiSelect }
             ),
+          })),
+          externalCriteria: t.externalCriteria.map((c) => ({
+            name: c.name,
+            weight: c.weight,
+            calcType: c.calcType,
+            thresholds: c.calcType === 'threshold' ? c.thresholds : undefined,
+            defaultScore: c.calcType === 'threshold' ? c.defaultScore : undefined,
+            options: c.calcType === 'options' ? c.options : undefined,
           })),
         })),
       })
@@ -439,23 +567,56 @@ export default function CreateEventForm() {
             <div className="flex flex-col gap-2">
               <h3 className="text-xs font-medium text-zinc-500">פריטים ({itemType.name || 'סוג זה'})</h3>
               {itemType.items.map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    value={item}
-                    onChange={(e) => updateItemTypeItem(ti, i, e.target.value)}
-                    placeholder={`פריט ${i + 1}`}
-                    className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeItemTypeItem(ti, i)}
-                    disabled={itemType.items.length <= 2}
-                    aria-label="הסר פריט"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
-                  >
-                    ✕
-                  </button>
+                <div key={i} className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={item.label}
+                      onChange={(e) => updateItemTypeItem(ti, i, { label: e.target.value })}
+                      placeholder={`פריט ${i + 1}`}
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeItemTypeItem(ti, i)}
+                      disabled={itemType.items.length <= 2}
+                      aria-label="הסר פריט"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {itemType.externalCriteria.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {itemType.externalCriteria.map((crit, ei) => (
+                        <label key={ei} className="flex min-w-[110px] flex-1 flex-col gap-1 text-xs text-zinc-500">
+                          {crit.name || `קריטריון ${ei + 1}`}
+                          {crit.calcType === 'options' ? (
+                            <select
+                              value={item.externalValues[ei] ?? ''}
+                              onChange={(e) => updateItemExternalValue(ti, i, ei, e.target.value)}
+                              className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                            >
+                              <option value="">—</option>
+                              {crit.options.map((opt, oi) => (
+                                <option key={oi} value={opt.label}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="number"
+                              step="any"
+                              value={item.externalValues[ei] ?? ''}
+                              onChange={(e) => updateItemExternalValue(ti, i, ei, e.target.value)}
+                              className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                            />
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               <button
@@ -639,6 +800,173 @@ export default function CreateEventForm() {
                 className="self-start rounded-xl border border-dashed border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-600"
               >
                 + הוסף קטגוריה
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <h3 className="text-xs font-medium text-zinc-500">
+                קריטריונים חיצוניים (אופציונלי) — למשל מחיר, יבוא/מקומי
+              </h3>
+              {itemType.externalCriteria.map((crit, ei) => (
+                <div key={ei} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-zinc-50 p-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={crit.name}
+                      onChange={(e) => updateExternalCriterion(ti, ei, { name: e.target.value })}
+                      placeholder="שם הקריטריון (למשל: מחיר)"
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeExternalCriterion(ti, ei)}
+                      aria-label="הסר קריטריון"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-zinc-500">
+                    משקל (כמו משקל קטגוריה)
+                    <input
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={crit.weight}
+                      onChange={(e) => updateExternalCriterion(ti, ei, { weight: Number(e.target.value) })}
+                      className="w-20 shrink-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                    />
+                  </label>
+
+                  <div className="flex gap-2">
+                    {(
+                      [
+                        { value: 'manual', label: 'ציון ידני' },
+                        { value: 'threshold', label: 'טבלת ספים' },
+                        { value: 'options', label: 'רשימת אפשרויות' },
+                      ] as { value: ExternalCriterionCalcType; label: string }[]
+                    ).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => updateExternalCriterion(ti, ei, { calcType: opt.value })}
+                        className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${
+                          crit.calcType === opt.value
+                            ? 'border-zinc-900 bg-zinc-900 text-white'
+                            : 'border-zinc-300 text-zinc-600'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {crit.calcType === 'manual' && (
+                    <p className="text-xs text-zinc-400">תזין ציון (1-5) ישירות לכל פריט למטה, בסעיף הפריטים</p>
+                  )}
+
+                  {crit.calcType === 'threshold' && (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-xs text-zinc-500">טווחי ערך ← ציון (מהנמוך לגבוה)</span>
+                      {crit.thresholds.map((th, thi) => (
+                        <div key={thi} className="flex items-center gap-2">
+                          <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                            עד ערך
+                            <input
+                              type="number"
+                              step="any"
+                              value={th.max}
+                              onChange={(e) => updateThreshold(ti, ei, thi, { max: Number(e.target.value) })}
+                              className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                            />
+                          </label>
+                          <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                            ציון
+                            <input
+                              type="number"
+                              step="any"
+                              value={th.score}
+                              onChange={(e) => updateThreshold(ti, ei, thi, { score: Number(e.target.value) })}
+                              className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => removeThreshold(ti, ei, thi)}
+                            disabled={crit.thresholds.length <= 1}
+                            aria-label="הסר סף"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addThreshold(ti, ei)}
+                        className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1 text-xs font-medium text-zinc-600"
+                      >
+                        + הוסף סף
+                      </button>
+                      <label className="flex items-center gap-2 text-xs text-zinc-500">
+                        ציון מעל כל הספים
+                        <input
+                          type="number"
+                          step="any"
+                          value={crit.defaultScore}
+                          onChange={(e) => updateExternalCriterion(ti, ei, { defaultScore: Number(e.target.value) })}
+                          className="w-20 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  {crit.calcType === 'options' && (
+                    <div className="flex flex-col gap-2">
+                      {crit.options.map((opt, oi) => (
+                        <div key={oi} className="flex items-center gap-2">
+                          <input
+                            value={opt.label}
+                            onChange={(e) => updateCriterionOption(ti, ei, oi, { label: e.target.value })}
+                            placeholder="תווית (למשל: יבוא)"
+                            className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                            required
+                          />
+                          <input
+                            type="number"
+                            step="any"
+                            value={opt.score}
+                            onChange={(e) => updateCriterionOption(ti, ei, oi, { score: Number(e.target.value) })}
+                            className="w-16 shrink-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeCriterionOption(ti, ei, oi)}
+                            disabled={crit.options.length <= 1}
+                            aria-label="הסר אפשרות"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addCriterionOption(ti, ei)}
+                        className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1 text-xs font-medium text-zinc-600"
+                      >
+                        + הוסף אפשרות
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => addExternalCriterion(ti)}
+                className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1.5 text-xs font-medium text-zinc-600"
+              >
+                + הוסף קריטריון חיצוני
               </button>
             </div>
           </div>

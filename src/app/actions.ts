@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { EventTheme, ParameterKind, ResultsVisibility } from '@/lib/types'
+import type { EventTheme, ExternalCriterionCalcType, ParameterKind, ResultsVisibility } from '@/lib/types'
 
 interface ParameterInput {
   name: string
@@ -19,11 +19,26 @@ interface CategoryInput {
   parameters: ParameterInput[]
 }
 
+interface ExternalCriterionInput {
+  name: string
+  weight: number
+  calcType: ExternalCriterionCalcType
+  thresholds?: { max: number; score: number }[]
+  defaultScore?: number
+  options?: { label: string; score: number }[]
+}
+
+interface ItemInput {
+  label: string
+  externalValues: Record<number, string>
+}
+
 interface ItemTypeInput {
   name: string
   template: string | null
-  items: string[]
+  items: ItemInput[]
   categories: CategoryInput[]
+  externalCriteria: ExternalCriterionInput[]
 }
 
 interface CreateEventInput {
@@ -70,7 +85,9 @@ export async function createEvent(input: CreateEventInput) {
   const itemTypes = input.itemTypes.map((t) => ({
     name: t.name.trim(),
     template: t.template,
-    items: t.items.map((s) => s.trim()).filter(Boolean),
+    items: t.items
+      .map((item) => ({ label: item.label.trim(), externalValues: item.externalValues }))
+      .filter((item) => item.label),
     categories: t.categories
       .map((c) => ({
         ...c,
@@ -79,6 +96,9 @@ export async function createEvent(input: CreateEventInput) {
           .map((p) => ({ ...p, name: p.name.trim() }))
           .filter((p) => p.name),
       }))
+      .filter((c) => c.name),
+    externalCriteria: t.externalCriteria
+      .map((c) => ({ ...c, name: c.name.trim() }))
       .filter((c) => c.name),
   }))
 
@@ -106,6 +126,22 @@ export async function createEvent(input: CreateEventInput) {
           if (!p.options || p.options.filter((o) => o.trim()).length === 0) {
             return { error: `צריך לפחות אפשרות אחת עבור "${p.name}"` }
           }
+        }
+      }
+    }
+    for (const c of t.externalCriteria) {
+      if (!(c.weight > 0)) return { error: `משקל לא תקין עבור הקריטריון "${c.name}"` }
+      if (c.calcType === 'threshold') {
+        if (!c.thresholds || c.thresholds.length === 0) {
+          return { error: `צריך לפחות סף אחד עבור "${c.name}"` }
+        }
+        if (!Number.isFinite(c.defaultScore)) {
+          return { error: `צריך ציון ברירת מחדל עבור "${c.name}"` }
+        }
+      }
+      if (c.calcType === 'options') {
+        if (!c.options || c.options.length === 0) {
+          return { error: `צריך לפחות אפשרות אחת עבור "${c.name}"` }
         }
       }
     }
@@ -160,11 +196,18 @@ export async function createEvent(input: CreateEventInput) {
     return { error: 'שגיאה בהוספת סוגי הפריט, נסה שוב' }
   }
 
-  const itemRows = itemTypes.flatMap((t, i) =>
-    t.items.map((label, j) => ({ item_type_id: itemTypeRows[i].id, label, sort_order: j }))
-  )
-  const { error: itemsError } = await supabase.from('item').insert(itemRows)
-  if (itemsError) {
+  const itemPlan = itemTypes.flatMap((t, i) => t.items.map((item) => ({ typeIndex: i, item })))
+  const { data: itemRows, error: itemsError } = await supabase
+    .from('item')
+    .insert(
+      itemPlan.map(({ typeIndex, item }, idx) => ({
+        item_type_id: itemTypeRows[typeIndex].id,
+        label: item.label,
+        sort_order: idx,
+      }))
+    )
+    .select()
+  if (itemsError || !itemRows) {
     await rollback()
     return { error: 'שגיאה בהוספת הפריטים, נסה שוב' }
   }
@@ -204,6 +247,58 @@ export async function createEvent(input: CreateEventInput) {
   if (paramsError) {
     await rollback()
     return { error: 'שגיאה בהוספת השאלות, נסה שוב' }
+  }
+
+  const criterionPlan = itemTypes.flatMap((t, i) =>
+    t.externalCriteria.map((c, j) => ({ typeIndex: i, localIndex: j, c }))
+  )
+  const criterionIdByKey = new Map<string, string>()
+  if (criterionPlan.length > 0) {
+    const { data: criterionRows, error: criterionError } = await supabase
+      .from('external_criterion')
+      .insert(
+        criterionPlan.map(({ typeIndex, c }, idx) => ({
+          item_type_id: itemTypeRows[typeIndex].id,
+          name: c.name,
+          weight: c.weight,
+          calc_type: c.calcType,
+          config:
+            c.calcType === 'threshold'
+              ? { thresholds: c.thresholds, defaultScore: c.defaultScore }
+              : c.calcType === 'options'
+                ? { options: c.options }
+                : null,
+          sort_order: idx,
+        }))
+      )
+      .select()
+
+    if (criterionError || !criterionRows) {
+      await rollback()
+      return { error: 'שגיאה בהוספת הקריטריונים החיצוניים, נסה שוב' }
+    }
+
+    criterionPlan.forEach((entry, idx) => {
+      criterionIdByKey.set(`${entry.typeIndex}:${entry.localIndex}`, criterionRows[idx].id)
+    })
+  }
+
+  const externalValueRows: { item_id: string; criterion_id: string; raw_value: string }[] = []
+  itemPlan.forEach(({ typeIndex, item }, idx) => {
+    const itemId = itemRows[idx].id
+    for (const [localIndex, rawValue] of Object.entries(item.externalValues)) {
+      if (!rawValue) continue
+      const criterionId = criterionIdByKey.get(`${typeIndex}:${localIndex}`)
+      if (!criterionId) continue
+      externalValueRows.push({ item_id: itemId, criterion_id: criterionId, raw_value: rawValue })
+    }
+  })
+  if (externalValueRows.length > 0) {
+    const { error: valuesError } = await supabase.from('item_external_value').insert(externalValueRows)
+    if (valuesError) {
+      await rollback()
+      return { error: 'שגיאה בהוספת ערכי הקריטריונים, נסה שוב' }
+    }
   }
 
   return {

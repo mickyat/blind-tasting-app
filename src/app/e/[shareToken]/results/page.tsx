@@ -43,6 +43,17 @@ export default async function ResultsPage(props: PageProps<'/e/[shareToken]/resu
       ? await supabase.from('parameter').select('*').in('category_id', categoryIds).order('sort_order')
       : { data: [] }
 
+  const { data: externalCriteria } =
+    itemTypeIds.length > 0
+      ? await supabase.from('external_criterion').select('*').in('item_type_id', itemTypeIds).order('sort_order')
+      : { data: [] }
+
+  const itemIds = (items ?? []).map((i) => i.id)
+  const { data: externalValues } =
+    itemIds.length > 0
+      ? await supabase.from('item_external_value').select('*').in('item_id', itemIds)
+      : { data: [] }
+
   const ev = event as EventRow
   const theme = THEME_STYLES[ev.theme]
 
@@ -63,6 +74,8 @@ export default async function ResultsPage(props: PageProps<'/e/[shareToken]/resu
           items={items ?? []}
           categories={categories ?? []}
           parameters={parameters ?? []}
+          externalCriteria={externalCriteria ?? []}
+          externalValues={externalValues ?? []}
         />
       </div>
     </main>
