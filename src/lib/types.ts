@@ -1,5 +1,15 @@
 export type ResultsVisibility = 'manual' | 'after_all_done' | 'live'
-export type EventTheme = 'default' | 'wine' | 'meat' | 'beer' | 'coffee'
+export type EventTheme =
+  | 'default'
+  | 'wine'
+  | 'meat'
+  | 'beer'
+  | 'coffee'
+  | 'whiskey'
+  | 'cheese'
+  | 'sausage'
+  | 'burger'
+  | 'pizza'
 export type ParameterKind = 'scale' | 'checklist'
 
 export interface EventRow {

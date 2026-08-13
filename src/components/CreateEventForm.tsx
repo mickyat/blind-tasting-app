@@ -117,9 +117,24 @@ function templateToItemType(template: EventTemplate): ItemTypeDraft {
   }
 }
 
+// Most templates share an id with their theme (e.g. template 'meat' -> theme
+// 'meat'); only exceptions (like the WSET variant reusing the wine theme)
+// need special-casing here.
+const THEME_IDS: EventTheme[] = [
+  'wine',
+  'meat',
+  'beer',
+  'coffee',
+  'whiskey',
+  'cheese',
+  'sausage',
+  'burger',
+  'pizza',
+]
+
 function themeForTemplate(templateId: string): EventTheme {
-  if (templateId === 'wine' || templateId === 'wine_wset') return 'wine'
-  if (templateId === 'meat' || templateId === 'beer' || templateId === 'coffee') return templateId
+  if (templateId === 'wine_wset') return 'wine'
+  if ((THEME_IDS as string[]).includes(templateId)) return templateId as EventTheme
   return 'default'
 }
 

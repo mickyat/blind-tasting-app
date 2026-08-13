@@ -24,7 +24,7 @@ create table event (
     check (results_visibility in ('manual', 'after_all_done', 'live')),
   results_open boolean not null default false,
   theme text not null default 'default'
-    check (theme in ('default', 'wine', 'meat', 'beer', 'coffee')),
+    check (theme in ('default', 'wine', 'meat', 'beer', 'coffee', 'whiskey', 'cheese', 'sausage', 'burger', 'pizza')),
   logo_url text,
   created_at timestamptz not null default now()
 );
