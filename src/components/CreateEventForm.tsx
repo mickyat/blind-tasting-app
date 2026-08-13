@@ -118,8 +118,8 @@ function templateToItemType(template: EventTemplate): ItemTypeDraft {
 }
 
 // Most templates share an id with their theme (e.g. template 'meat' -> theme
-// 'meat'); only exceptions (like the WSET variant reusing the wine theme)
-// need special-casing here.
+// 'meat'); only exceptions (like the systematic-tasting variant reusing the
+// wine theme) need special-casing here.
 const THEME_IDS: EventTheme[] = [
   'wine',
   'meat',
@@ -133,7 +133,7 @@ const THEME_IDS: EventTheme[] = [
 ]
 
 function themeForTemplate(templateId: string): EventTheme {
-  if (templateId === 'wine_wset') return 'wine'
+  if (templateId === 'wine_pro') return 'wine'
   if ((THEME_IDS as string[]).includes(templateId)) return templateId as EventTheme
   return 'default'
 }
@@ -473,7 +473,9 @@ export default function CreateEventForm() {
               <span className={`text-base font-semibold ${THEME_STYLES[themeForTemplate(t.id)].accent}`}>
                 {t.label}
               </span>
-              <span className="text-xs font-normal text-zinc-500">תבנית מוכנה</span>
+              <span className={`text-xs font-normal ${THEME_STYLES[themeForTemplate(t.id)].muted}`}>
+                תבנית מוכנה
+              </span>
             </button>
           ))}
         </div>
@@ -489,10 +491,7 @@ export default function CreateEventForm() {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className={`flex flex-col gap-8 rounded-2xl p-4 -mx-4 ${THEME_STYLES[theme].bg}`}
-    >
+    <form onSubmit={handleSubmit} className="flex flex-col gap-8">
       <button
         type="button"
         onClick={() => setStep('template')}

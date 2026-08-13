@@ -56,7 +56,7 @@ export default async function JoinPage(props: PageProps<'/e/[shareToken]'>) {
             <img src={ev.logo_url} alt="" className="h-16 w-16 rounded-lg object-contain" />
           )}
           <h1 className={`text-xl font-bold ${theme.accent}`}>{ev.title}</h1>
-          <p className="text-xs text-zinc-500">הטעמה עיוורת</p>
+          <p className={`text-xs ${theme.muted}`}>הטעמה עיוורת</p>
         </header>
         <ParticipantFlow
           event={ev}

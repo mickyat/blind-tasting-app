@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { THEME_STYLES } from '@/lib/theme'
 import { getLastCategory, orderItemsByType } from '@/lib/results'
 import type {
   CategoryRow,
@@ -46,6 +47,7 @@ const TEXT_SIZE_STYLES: Record<TextSize, { heading: string; label: string; butto
 const TEXT_SIZE_STORAGE_KEY = 'bt_text_size'
 
 export default function ParticipantFlow({ event, itemTypes, items, categories, parameters }: Props) {
+  const theme = THEME_STYLES[event.theme]
   const [supabase] = useState(() => createClient())
   const [checking, setChecking] = useState(true)
   const [participant, setParticipant] = useState<ParticipantRow | null>(null)
@@ -171,7 +173,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
   }, [items, parameters, categories, scores, checklistAnswers])
 
   if (checking) {
-    return <p className="text-center text-sm text-zinc-400">טוען…</p>
+    return <p className={`text-center text-sm ${theme.muted}`}>טוען…</p>
   }
 
   if (!participant) {
@@ -179,6 +181,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
       <JoinForm
         event={event}
         supabase={supabase}
+        theme={theme}
         onJoined={(p) => {
           localStorage.setItem(sessionKey(event.id), p.session_token)
           setParticipant(p)
@@ -327,7 +330,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
         <div className="flex flex-col gap-3">
           {itemTypes.map((t) => (
             <div key={t.id} className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-zinc-500">{t.name}</span>
+              <span className={`text-xs font-medium ${theme.muted}`}>{t.name}</span>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {items.filter((i) => i.item_type_id === t.id).map(renderItemTab)}
               </div>
@@ -362,10 +365,10 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
                 const isLastCategory = category.id === activeItemLastCategory?.id
                 return (
                   <div key={category.id} className="flex flex-col gap-3">
-                    <h3 className={`font-semibold text-zinc-800 ${TEXT_SIZE_STYLES[textSize].heading}`}>
+                    <h3 className={`font-semibold ${theme.accent} ${TEXT_SIZE_STYLES[textSize].heading}`}>
                       {category.name}
                       {isLastCategory && (
-                        <span className="mr-2 text-xs font-normal text-amber-600">(חובה)</span>
+                        <span className={`mr-2 text-xs font-normal ${theme.muted}`}>(חובה)</span>
                       )}
                     </h3>
                     <div className="flex flex-col gap-3">
@@ -445,7 +448,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
             {!activeItemLocked && (
               <div className="flex flex-col gap-2">
                 {!activeItemDone && (
-                  <p className="text-center text-xs text-zinc-500">
+                  <p className={`text-center text-xs ${theme.muted}`}>
                     יש למלא את הקטגוריה &quot;{activeItemLastCategory?.name}&quot; כדי להמשיך
                   </p>
                 )}
@@ -470,7 +473,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
         למסך התוצאות
       </Link>
 
-      <Link href="/" className="text-center text-xs text-zinc-400 underline">
+      <Link href="/" className={`text-center text-xs underline ${theme.muted}`}>
         את/ה המארגן/ת של האירוע? חזרה לדף הבית
       </Link>
     </div>
@@ -480,10 +483,12 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
 function JoinForm({
   event,
   supabase,
+  theme,
   onJoined,
 }: {
   event: EventRow
   supabase: ReturnType<typeof createClient>
+  theme: (typeof THEME_STYLES)[keyof typeof THEME_STYLES]
   onJoined: (p: ParticipantRow) => void
 }) {
   const [nickname, setNickname] = useState('')
@@ -511,7 +516,7 @@ function JoinForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <label htmlFor="nickname" className="text-sm font-medium text-zinc-700">
+      <label htmlFor="nickname" className={`text-sm font-medium ${theme.accent}`}>
         איך קוראים לך?
       </label>
       <input
@@ -522,7 +527,7 @@ function JoinForm({
         className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
         required
       />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       <button
         type="submit"
         disabled={pending}
@@ -530,7 +535,7 @@ function JoinForm({
       >
         {pending ? 'מצטרף…' : 'הצטרף להטעימה'}
       </button>
-      <Link href="/" className="text-center text-xs text-zinc-400 underline">
+      <Link href="/" className={`text-center text-xs underline ${theme.muted}`}>
         את/ה המארגן/ת של האירוע? חזרה לדף הבית
       </Link>
     </form>

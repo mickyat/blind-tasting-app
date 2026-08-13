@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { THEME_STYLES } from '@/lib/theme'
 import {
   buildAnsweredSet,
   calculateResults,
@@ -103,17 +104,18 @@ export default function ResultsView({
 
   const openItems = itemsState.filter(isItemOpen)
   const pendingItems = itemsState.filter((i) => !isItemOpen(i))
+  const theme = THEME_STYLES[event.theme]
 
   if (openItems.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-800" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
         {event.results_visibility === 'after_all_done' ? (
-          <p className="text-base font-medium text-zinc-700">מחכים שמשתתפים יסיימו לדרג פריטים</p>
+          <p className={`text-base font-medium ${theme.accent}`}>מחכים שמשתתפים יסיימו לדרג פריטים</p>
         ) : (
-          <p className="text-base font-medium text-zinc-700">מחכים שהמארגן יפתח את התוצאות</p>
+          <p className={`text-base font-medium ${theme.accent}`}>מחכים שהמארגן יפתח את התוצאות</p>
         )}
-        <Link href="/" className="text-xs text-zinc-400 underline">
+        <Link href="/" className={`text-xs underline ${theme.muted}`}>
           את/ה המארגן/ת של האירוע? חזרה לדף הבית
         </Link>
       </div>
@@ -138,6 +140,7 @@ export default function ResultsView({
         title={hasMultipleTypes ? 'דירוג כללי' : undefined}
         results={overallRanked}
         itemDetails={itemDetails}
+        theme={theme}
       />
 
       {hasMultipleTypes &&
@@ -148,14 +151,20 @@ export default function ResultsView({
             calculateResults(typeItems, categories, parameters, scores, externalCriteria, externalValues)
           )
           return (
-            <RankingList key={t.id} title={`דירוג ${t.name}`} results={typeRanked} itemDetails={itemDetails} />
+            <RankingList
+              key={t.id}
+              title={`דירוג ${t.name}`}
+              results={typeRanked}
+              itemDetails={itemDetails}
+              theme={theme}
+            />
           )
         })}
 
       {pendingItems.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-xl border border-dashed border-zinc-300 p-4">
-          <span className="text-xs font-medium text-zinc-500">טרם פורסמו</span>
-          <span className="text-sm text-zinc-600">{pendingItems.map((i) => i.label).join(', ')}</span>
+        <div className="flex flex-col gap-2 rounded-xl border border-dashed border-white/30 p-4">
+          <span className={`text-xs font-medium ${theme.accent}`}>טרם פורסמו</span>
+          <span className={`text-sm ${theme.muted}`}>{pendingItems.map((i) => i.label).join(', ')}</span>
         </div>
       )}
 
@@ -165,9 +174,10 @@ export default function ResultsView({
         parameters={parameters}
         checklistAnswers={checklistAnswers}
         participantCount={participants.length}
+        theme={theme}
       />
 
-      <Link href="/" className="text-center text-xs text-zinc-400 underline">
+      <Link href="/" className={`text-center text-xs underline ${theme.muted}`}>
         את/ה המארגן/ת של האירוע? חזרה לדף הבית
       </Link>
     </div>
@@ -178,10 +188,12 @@ function RankingList({
   title,
   results,
   itemDetails,
+  theme,
 }: {
   title?: string
   results: ItemResult[]
   itemDetails: Map<string, ItemDetail>
+  theme: (typeof THEME_STYLES)[keyof typeof THEME_STYLES]
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
@@ -196,7 +208,7 @@ function RankingList({
 
   return (
     <div className="flex flex-col gap-3">
-      {title && <h2 className="text-sm font-semibold text-zinc-700">{title}</h2>}
+      {title && <h2 className={`text-sm font-semibold ${theme.accent}`}>{title}</h2>}
       {results.map((r, i) => {
         const detail = itemDetails.get(r.item.id)
         const hasDetail =
@@ -316,12 +328,14 @@ function DescriptiveSummary({
   parameters,
   checklistAnswers,
   participantCount,
+  theme,
 }: {
   items: ItemRow[]
   categories: CategoryRow[]
   parameters: ParameterRow[]
   checklistAnswers: ChecklistAnswerRow[]
   participantCount: number
+  theme: (typeof THEME_STYLES)[keyof typeof THEME_STYLES]
 }) {
   const checklistParams = parameters.filter((p) => p.kind === 'checklist')
   if (checklistParams.length === 0 || participantCount === 0) return null
@@ -330,7 +344,7 @@ function DescriptiveSummary({
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold text-zinc-700">סיכום תיאורי טעימה</h2>
+      <h2 className={`text-sm font-semibold ${theme.accent}`}>סיכום תיאורי טעימה</h2>
       {items.map((item) => {
         const itemParams = checklistParams.filter(
           (p) => categoryById.get(p.category_id)?.item_type_id === item.item_type_id

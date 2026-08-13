@@ -66,7 +66,7 @@ export default async function ResultsPage(props: PageProps<'/e/[shareToken]/resu
             <img src={ev.logo_url} alt="" className="h-16 w-16 rounded-lg object-contain" />
           )}
           <h1 className={`text-xl font-bold ${theme.accent}`}>{ev.title}</h1>
-          <p className="text-xs text-zinc-500">תוצאות</p>
+          <p className={`text-xs ${theme.muted}`}>תוצאות</p>
         </header>
         <ResultsView
           event={ev}
