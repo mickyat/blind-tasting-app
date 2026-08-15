@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "הטעמות עיוורות",
-  description: "אפליקציה ליצירת אירועי הטעימה עיוורת ושיתוף תוצאות בזמן אמת",
+  title: "פאנל הטעם — TastePanel",
+  description: "TastePanel - אפליקציה ליצירת אירועי טעימה עיוורת (יין, בשר, בירה ועוד) ושיתוף תוצאות בזמן אמת",
 };
 
 // Explicitly not setting maximumScale/userScalable so the browser's own
