@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { THEME_STYLES } from '@/lib/theme'
+import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import { getLastCategory, orderItemsByType } from '@/lib/results'
 import type {
   CategoryRow,
@@ -61,6 +62,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
   const [finished, setFinished] = useState(false)
   const [reminder, setReminder] = useState(false)
   const [saveError, setSaveError] = useState(false)
+  const [warningTrigger, setWarningTrigger] = useState(0)
 
   function flagSaveError() {
     setSaveError(true)
@@ -197,8 +199,28 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
   }
 
   function setScore(itemId: string, parameterId: string, value: number) {
+    const key = scoreKey(itemId, parameterId)
+    const isCurrentlySelected = scores[key] === value
+
     // Optimistic: reflect the tap instantly, save in the background.
-    setScores((prev) => ({ ...prev, [scoreKey(itemId, parameterId)]: value }))
+    if (isCurrentlySelected) {
+      // Tapping the already-selected value again clears the answer.
+      setScores((prev) => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+      supabase
+        .from('score')
+        .delete()
+        .match({ participant_id: participant!.id, item_id: itemId, parameter_id: parameterId })
+        .then(({ error }) => {
+          if (error) flagSaveError()
+        })
+      return
+    }
+
+    setScores((prev) => ({ ...prev, [key]: value }))
     supabase
       .from('score')
       .upsert(
@@ -259,6 +281,14 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
 
   function handleFinishItem() {
     if (!activeItem) return
+    if (!activeItemDone) {
+      // The button stays clickable on purpose (a disabled button can't give
+      // feedback on tap) - flash the warning instead of silently doing
+      // nothing. The key bump forces the CSS animation to replay even if
+      // it's already showing.
+      setWarningTrigger((n) => n + 1)
+      return
+    }
     const idx = orderedItems.findIndex((i) => i.id === activeItem.id)
     if (idx === -1) return
     if (idx === orderedItems.length - 1) {
@@ -464,16 +494,14 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
             {!activeItemLocked && (
               <div className="flex flex-col gap-3">
                 {!activeItemDone && (
-                  <div className="rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-900">
+                  <div
+                    key={warningTrigger}
+                    className="animate-shake rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-900"
+                  >
                     ⚠️ יש למלא את קטגוריית &quot;{activeItemLastCategory?.name}&quot; לפני שממשיכים
                   </div>
                 )}
-                <button
-                  type="button"
-                  onClick={handleFinishItem}
-                  disabled={!activeItemDone}
-                  className="rounded-xl bg-zinc-900 px-4 py-4 text-base font-semibold text-white disabled:opacity-40"
-                >
+                <button type="button" onClick={handleFinishItem} className={PRIMARY_BUTTON_CLASS}>
                   {isLastItem ? 'סיימתי לדרג' : 'סיימתי - לפריט הבא'}
                 </button>
                 <Link
@@ -550,11 +578,7 @@ function JoinForm({
         required
       />
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-zinc-900 px-4 py-4 text-base font-semibold text-white disabled:opacity-50"
-      >
+      <button type="submit" disabled={pending} className={PRIMARY_BUTTON_CLASS}>
         {pending ? 'מצטרף…' : 'הצטרף להטעימה'}
       </button>
       <Link href="/" className={`text-center text-xs underline ${theme.muted}`}>

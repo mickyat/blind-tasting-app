@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createEvent, uploadEventLogo } from '@/app/actions'
 import type { EventTheme, ExternalCriterionCalcType, ParameterKind, ResultsVisibility } from '@/lib/types'
 import { THEME_STYLES } from '@/lib/theme'
+import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import { EVENT_TEMPLATES, type EventTemplate } from '@/lib/templates'
 import { saveMyEvent } from '@/components/MyEvents'
 
@@ -71,12 +72,19 @@ function emptyItem(): ItemDraft {
 function emptyExternalCriterion(): ExternalCriterionDraft {
   return {
     name: '',
-    weight: 5,
+    weight: 1,
     calcType: 'manual',
     thresholds: [{ max: 0, score: 5 }],
     defaultScore: 1,
     options: [{ label: '', score: 5 }],
   }
+}
+
+// Pre-filled numeric fields are fiddly to overwrite on mobile (the browser
+// doesn't select the existing text on tap), so select-all on focus - the
+// next keystroke then replaces the whole value instead of inserting into it.
+function selectOnFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.select()
 }
 
 function emptyItemType(): ItemTypeDraft {
@@ -581,56 +589,23 @@ export default function CreateEventForm() {
             <div className="flex flex-col gap-2">
               <h3 className="text-xs font-medium text-zinc-500">פריטים ({itemType.name || 'סוג זה'})</h3>
               {itemType.items.map((item, i) => (
-                <div key={i} className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      value={item.label}
-                      onChange={(e) => updateItemTypeItem(ti, i, { label: e.target.value })}
-                      placeholder={`פריט ${i + 1}`}
-                      className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeItemTypeItem(ti, i)}
-                      disabled={itemType.items.length <= 2}
-                      aria-label="הסר פריט"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {itemType.externalCriteria.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {itemType.externalCriteria.map((crit, ei) => (
-                        <label key={ei} className="flex min-w-[110px] flex-1 flex-col gap-1 text-xs text-zinc-500">
-                          {crit.name || `קריטריון ${ei + 1}`}
-                          {crit.calcType === 'options' ? (
-                            <select
-                              value={item.externalValues[ei] ?? ''}
-                              onChange={(e) => updateItemExternalValue(ti, i, ei, e.target.value)}
-                              className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
-                            >
-                              <option value="">—</option>
-                              {crit.options.map((opt, oi) => (
-                                <option key={oi} value={opt.label}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <input
-                              type="number"
-                              step="any"
-                              value={item.externalValues[ei] ?? ''}
-                              onChange={(e) => updateItemExternalValue(ti, i, ei, e.target.value)}
-                              className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
-                            />
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    value={item.label}
+                    onChange={(e) => updateItemTypeItem(ti, i, { label: e.target.value })}
+                    placeholder={`פריט ${i + 1}`}
+                    className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeItemTypeItem(ti, i)}
+                    disabled={itemType.items.length <= 2}
+                    aria-label="הסר פריט"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                  >
+                    ✕
+                  </button>
                 </div>
               ))}
               <button
@@ -674,6 +649,7 @@ export default function CreateEventForm() {
                         step="any"
                         value={crit.weight}
                         onChange={(e) => updateExternalCriterion(ti, ei, { weight: Number(e.target.value) })}
+                        onFocus={selectOnFocus}
                         className="w-20 shrink-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
                       />
                     </label>
@@ -702,7 +678,9 @@ export default function CreateEventForm() {
                     </div>
 
                     {crit.calcType === 'manual' && (
-                      <p className="text-xs text-zinc-400">תזין ציון (1-5) ישירות לכל פריט למעלה, בסעיף הפריטים</p>
+                      <p className="text-xs text-zinc-400">
+                        תזין ציון (1-5) ישירות לכל פריט למטה, בסעיף &quot;ערכים לכל פריט&quot;
+                      </p>
                     )}
 
                     {crit.calcType === 'threshold' && (
@@ -717,6 +695,7 @@ export default function CreateEventForm() {
                                 step="any"
                                 value={th.max}
                                 onChange={(e) => updateThreshold(ti, ei, thi, { max: Number(e.target.value) })}
+                                onFocus={selectOnFocus}
                                 className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                               />
                             </label>
@@ -727,6 +706,7 @@ export default function CreateEventForm() {
                                 step="any"
                                 value={th.score}
                                 onChange={(e) => updateThreshold(ti, ei, thi, { score: Number(e.target.value) })}
+                                onFocus={selectOnFocus}
                                 className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                               />
                             </label>
@@ -755,6 +735,7 @@ export default function CreateEventForm() {
                             step="any"
                             value={crit.defaultScore}
                             onChange={(e) => updateExternalCriterion(ti, ei, { defaultScore: Number(e.target.value) })}
+                            onFocus={selectOnFocus}
                             className="w-20 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                           />
                         </label>
@@ -777,6 +758,7 @@ export default function CreateEventForm() {
                               step="any"
                               value={opt.score}
                               onChange={(e) => updateCriterionOption(ti, ei, oi, { score: Number(e.target.value) })}
+                              onFocus={selectOnFocus}
                               className="w-16 shrink-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                             />
                             <button
@@ -808,6 +790,49 @@ export default function CreateEventForm() {
                 >
                   + הוסף קריטריון חיצוני
                 </button>
+
+                {itemType.externalCriteria.length > 0 && (
+                  <div className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-3">
+                    <span className="text-xs font-medium text-zinc-500">
+                      ערכים לכל פריט ({itemType.name || 'סוג זה'})
+                    </span>
+                    {itemType.items.map((item, i) => (
+                      <div key={i} className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2">
+                        <span className="text-sm font-medium text-zinc-700">{item.label || `פריט ${i + 1}`}</span>
+                        <div className="flex flex-wrap gap-2">
+                          {itemType.externalCriteria.map((crit, ei) => (
+                            <label key={ei} className="flex min-w-[110px] flex-1 flex-col gap-1 text-xs text-zinc-500">
+                              {crit.name || `קריטריון ${ei + 1}`}
+                              {crit.calcType === 'options' ? (
+                                <select
+                                  value={item.externalValues[ei] ?? ''}
+                                  onChange={(e) => updateItemExternalValue(ti, i, ei, e.target.value)}
+                                  className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                                >
+                                  <option value="">—</option>
+                                  {crit.options.map((opt, oi) => (
+                                    <option key={oi} value={opt.label}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="number"
+                                  step="any"
+                                  value={item.externalValues[ei] ?? ''}
+                                  onChange={(e) => updateItemExternalValue(ti, i, ei, e.target.value)}
+                                  onFocus={selectOnFocus}
+                                  className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                                />
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </details>
 
@@ -842,6 +867,7 @@ export default function CreateEventForm() {
                         step="any"
                         value={category.weight}
                         onChange={(e) => updateCategory(ti, ci, { weight: Number(e.target.value) })}
+                        onFocus={selectOnFocus}
                         className="w-20 shrink-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
                       />
                     </label>
@@ -900,6 +926,7 @@ export default function CreateEventForm() {
                                 step="any"
                                 value={p.weight}
                                 onChange={(e) => updateParameter(ti, ci, pi, { weight: Number(e.target.value) })}
+                                onFocus={selectOnFocus}
                                 className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
                               />
                             </label>
@@ -910,6 +937,7 @@ export default function CreateEventForm() {
                                   type="number"
                                   value={p.scaleMin}
                                   onChange={(e) => updateParameter(ti, ci, pi, { scaleMin: Number(e.target.value) })}
+                                  onFocus={selectOnFocus}
                                   className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
                                 />
                               </label>
@@ -919,6 +947,7 @@ export default function CreateEventForm() {
                                   type="number"
                                   value={p.scaleMax}
                                   onChange={(e) => updateParameter(ti, ci, pi, { scaleMax: Number(e.target.value) })}
+                                  onFocus={selectOnFocus}
                                   className="w-full min-w-0 rounded-lg border border-zinc-300 px-2 py-2 text-base focus:border-zinc-500 focus:outline-none"
                                 />
                               </label>
@@ -1023,11 +1052,7 @@ export default function CreateEventForm() {
 
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-zinc-900 px-4 py-4 text-base font-semibold text-white disabled:opacity-50"
-      >
+      <button type="submit" disabled={pending} className={PRIMARY_BUTTON_CLASS}>
         {pending ? 'יוצר אירוע…' : 'צור אירוע'}
       </button>
     </form>

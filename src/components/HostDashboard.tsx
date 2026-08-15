@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { openResults, openItemResults } from '@/app/actions'
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
+import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import type {
   CategoryRow,
   ChecklistAnswerRow,
@@ -213,11 +214,7 @@ export default function HostDashboard({ hostToken, event, items, categories, par
 
         {event.results_visibility === 'manual' && (
           <>
-            <button
-              onClick={handleOpenResults}
-              disabled={opening}
-              className="rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-            >
+            <button onClick={handleOpenResults} disabled={opening} className={PRIMARY_BUTTON_CLASS}>
               {opening ? 'פותח…' : 'הצג תוצאות לכל הפריטים'}
             </button>
             <div className="flex flex-col gap-2">

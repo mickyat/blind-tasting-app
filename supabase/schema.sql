@@ -206,6 +206,8 @@ create policy "anyone can insert their scores" on score
   for insert with check (true);
 create policy "anyone can update their scores" on score
   for update using (true) with check (true);
+create policy "anyone can delete their scores" on score
+  for delete using (true);
 
 create policy "checklist_answer readable by anyone" on checklist_answer
   for select using (true);
