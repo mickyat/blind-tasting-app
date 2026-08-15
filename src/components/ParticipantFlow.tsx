@@ -60,6 +60,12 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
   )
   const [finished, setFinished] = useState(false)
   const [reminder, setReminder] = useState(false)
+  const [saveError, setSaveError] = useState(false)
+
+  function flagSaveError() {
+    setSaveError(true)
+    setTimeout(() => setSaveError(false), 4000)
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem(TEXT_SIZE_STORAGE_KEY)
@@ -190,62 +196,65 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
     )
   }
 
-  async function setScore(itemId: string, parameterId: string, value: number) {
+  function setScore(itemId: string, parameterId: string, value: number) {
+    // Optimistic: reflect the tap instantly, save in the background.
     setScores((prev) => ({ ...prev, [scoreKey(itemId, parameterId)]: value }))
-    await supabase
+    supabase
       .from('score')
       .upsert(
         { participant_id: participant!.id, item_id: itemId, parameter_id: parameterId, value },
         { onConflict: 'participant_id,item_id,parameter_id' }
       )
+      .then(({ error }) => {
+        if (error) flagSaveError()
+      })
   }
 
-  async function toggleChecklistOption(
-    itemId: string,
-    parameterId: string,
-    option: string,
-    multiSelect: boolean
-  ) {
+  function toggleChecklistOption(itemId: string, parameterId: string, option: string, multiSelect: boolean) {
     const key = scoreKey(itemId, parameterId)
     const current = checklistAnswers[key] ?? new Set<string>()
     const isSelected = current.has(option)
+    const participantId = participant!.id
 
+    // Optimistic: reflect the tap instantly, save in the background.
     if (multiSelect) {
-      if (isSelected) {
-        await supabase
+      const next = new Set(current)
+      if (isSelected) next.delete(option)
+      else next.add(option)
+      setChecklistAnswers((prev) => ({ ...prev, [key]: next }))
+
+      const query = isSelected
+        ? supabase.from('checklist_answer').delete().match({ participant_id: participantId, item_id: itemId, parameter_id: parameterId, option })
+        : supabase.from('checklist_answer').insert({ participant_id: participantId, item_id: itemId, parameter_id: parameterId, option })
+      query.then(({ error }) => {
+        if (error) flagSaveError()
+      })
+    } else {
+      setChecklistAnswers((prev) => ({ ...prev, [key]: isSelected ? new Set() : new Set([option]) }))
+
+      ;(async () => {
+        const { error: deleteError } = await supabase
           .from('checklist_answer')
           .delete()
-          .match({ participant_id: participant!.id, item_id: itemId, parameter_id: parameterId, option })
-        const next = new Set(current)
-        next.delete(option)
-        setChecklistAnswers((prev) => ({ ...prev, [key]: next }))
-      } else {
-        await supabase
-          .from('checklist_answer')
-          .insert({ participant_id: participant!.id, item_id: itemId, parameter_id: parameterId, option })
-        const next = new Set(current)
-        next.add(option)
-        setChecklistAnswers((prev) => ({ ...prev, [key]: next }))
-      }
-    } else {
-      await supabase
-        .from('checklist_answer')
-        .delete()
-        .match({ participant_id: participant!.id, item_id: itemId, parameter_id: parameterId })
-      if (isSelected) {
-        setChecklistAnswers((prev) => ({ ...prev, [key]: new Set() }))
-      } else {
-        await supabase
-          .from('checklist_answer')
-          .insert({ participant_id: participant!.id, item_id: itemId, parameter_id: parameterId, option })
-        setChecklistAnswers((prev) => ({ ...prev, [key]: new Set([option]) }))
-      }
+          .match({ participant_id: participantId, item_id: itemId, parameter_id: parameterId })
+        if (deleteError) {
+          flagSaveError()
+          return
+        }
+        if (!isSelected) {
+          const { error: insertError } = await supabase
+            .from('checklist_answer')
+            .insert({ participant_id: participantId, item_id: itemId, parameter_id: parameterId, option })
+          if (insertError) flagSaveError()
+        }
+      })()
     }
   }
 
   function selectItem(itemId: string) {
     setActiveItemId(itemId)
     setFinished(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function handleFinishItem() {
@@ -254,6 +263,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
     if (idx === -1) return
     if (idx === orderedItems.length - 1) {
       setFinished(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       selectItem(orderedItems[idx + 1].id)
     }
@@ -286,6 +296,12 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
 
   return (
     <div className="flex flex-col gap-5">
+      {saveError && (
+        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-center text-sm text-red-700">
+          שגיאה בשמירת הציון האחרון, נסה ללחוץ שוב
+        </div>
+      )}
+
       {reminder && (
         <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <span>המארגן מבקש שתסיים למלא 🙂</span>
@@ -446,11 +462,11 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
               })}
 
             {!activeItemLocked && (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {!activeItemDone && (
-                  <p className={`text-center text-xs ${theme.muted}`}>
-                    יש למלא את הקטגוריה &quot;{activeItemLastCategory?.name}&quot; כדי להמשיך
-                  </p>
+                  <div className="rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-900">
+                    ⚠️ יש למלא את קטגוריית &quot;{activeItemLastCategory?.name}&quot; לפני שממשיכים
+                  </div>
                 )}
                 <button
                   type="button"
@@ -460,6 +476,12 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
                 >
                   {isLastItem ? 'סיימתי לדרג' : 'סיימתי - לפריט הבא'}
                 </button>
+                <Link
+                  href={`/e/${event.share_token}/results`}
+                  className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-center text-sm font-medium text-zinc-700"
+                >
+                  צפייה בתוצאות
+                </Link>
               </div>
             )}
           </div>
