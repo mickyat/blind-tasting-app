@@ -86,8 +86,11 @@ export interface ChecklistAnswerRow {
 
 export type ExternalCriterionCalcType = 'manual' | 'threshold' | 'options'
 
+export type ThresholdDirection = 'below' | 'above'
+
 export interface ThresholdRule {
-  max: number
+  direction: ThresholdDirection
+  value: number
   score: number
 }
 
@@ -98,7 +101,6 @@ export interface OptionRule {
 
 export interface ExternalCriterionConfig {
   thresholds?: ThresholdRule[]
-  defaultScore?: number
   options?: OptionRule[]
 }
 

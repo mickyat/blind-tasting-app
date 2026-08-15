@@ -101,11 +101,12 @@ export function resolveExternalScore(
   if (criterion.calc_type === 'threshold') {
     const n = Number(rawValue)
     if (!Number.isFinite(n)) return null
-    const thresholds = [...(criterion.config?.thresholds ?? [])].sort((a, b) => a.max - b.max)
+    const thresholds = criterion.config?.thresholds ?? []
     for (const t of thresholds) {
-      if (n <= t.max) return t.score
+      const matches = t.direction === 'above' ? n >= t.value : n <= t.value
+      if (matches) return t.score
     }
-    return criterion.config?.defaultScore ?? null
+    return null
   }
 
   if (criterion.calc_type === 'options') {

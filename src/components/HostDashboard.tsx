@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { openResults, openItemResults } from '@/app/actions'
+import { openResults, openItemResults, updateExternalValue } from '@/app/actions'
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import type {
   CategoryRow,
   ChecklistAnswerRow,
   EventRow,
+  ExternalCriterionRow,
+  ItemExternalValueRow,
   ItemRow,
   ParameterRow,
   ParticipantRow,
@@ -21,6 +23,8 @@ interface Props {
   items: ItemRow[]
   categories: CategoryRow[]
   parameters: ParameterRow[]
+  externalCriteria: ExternalCriterionRow[]
+  externalValues: ItemExternalValueRow[]
 }
 
 const VISIBILITY_LABELS: Record<string, string> = {
@@ -29,7 +33,15 @@ const VISIBILITY_LABELS: Record<string, string> = {
   live: 'חי',
 }
 
-export default function HostDashboard({ hostToken, event, items, categories, parameters }: Props) {
+export default function HostDashboard({
+  hostToken,
+  event,
+  items,
+  categories,
+  parameters,
+  externalCriteria,
+  externalValues,
+}: Props) {
   const [supabase] = useState(() => createClient())
   const [participants, setParticipants] = useState<ParticipantRow[]>([])
   const [scores, setScores] = useState<ScoreRow[]>([])
@@ -39,6 +51,28 @@ export default function HostDashboard({ hostToken, event, items, categories, par
   const [openingItemId, setOpeningItemId] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [reminded, setReminded] = useState<Record<string, boolean>>({})
+
+  const [externalValueState, setExternalValueState] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {}
+    for (const v of externalValues) {
+      if (v.raw_value !== null) init[`${v.item_id}:${v.criterion_id}`] = v.raw_value
+    }
+    return init
+  })
+  const [externalSaving, setExternalSaving] = useState<Record<string, boolean>>({})
+  const [externalSaved, setExternalSaved] = useState<Record<string, boolean>>({})
+
+  async function saveExternalValue(itemId: string, criterionId: string, value: string) {
+    const key = `${itemId}:${criterionId}`
+    setExternalValueState((prev) => ({ ...prev, [key]: value }))
+    setExternalSaving((prev) => ({ ...prev, [key]: true }))
+    const result = await updateExternalValue(hostToken, itemId, criterionId, value)
+    setExternalSaving((prev) => ({ ...prev, [key]: false }))
+    if ('ok' in result) {
+      setExternalSaved((prev) => ({ ...prev, [key]: true }))
+      setTimeout(() => setExternalSaved((prev) => ({ ...prev, [key]: false })), 1500)
+    }
+  }
 
   const refresh = useCallback(async () => {
     const { data: parts } = await supabase
@@ -206,6 +240,61 @@ export default function HostDashboard({ hostToken, event, items, categories, par
           </ul>
         )}
       </div>
+
+      {externalCriteria.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-medium text-zinc-700">קריטריונים חיצוניים</h2>
+          {itemsState.map((item) => {
+            const itemCriteria = externalCriteria.filter((c) => c.item_type_id === item.item_type_id)
+            if (itemCriteria.length === 0) return null
+            return (
+              <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-3">
+                <span className="text-sm font-medium text-zinc-800">{item.label}</span>
+                <div className="flex flex-wrap gap-2">
+                  {itemCriteria.map((crit) => {
+                    const key = `${item.id}:${crit.id}`
+                    const value = externalValueState[key] ?? ''
+                    return (
+                      <label key={crit.id} className="flex min-w-[110px] flex-1 flex-col gap-1 text-xs text-zinc-500">
+                        <span className="flex items-center gap-1">
+                          {crit.name}
+                          {externalSaving[key] && <span className="text-zinc-400">שומר…</span>}
+                          {externalSaved[key] && <span className="text-green-600">נשמר ✓</span>}
+                        </span>
+                        {crit.calc_type === 'options' ? (
+                          <select
+                            value={value}
+                            onChange={(e) => saveExternalValue(item.id, crit.id, e.target.value)}
+                            className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                          >
+                            <option value="">—</option>
+                            {(crit.config?.options ?? []).map((opt, oi) => (
+                              <option key={oi} value={opt.label}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="number"
+                            step="any"
+                            value={value}
+                            onChange={(e) =>
+                              setExternalValueState((prev) => ({ ...prev, [key]: e.target.value }))
+                            }
+                            onBlur={(e) => saveExternalValue(item.id, crit.id, e.target.value)}
+                            className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                          />
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white p-4">
         <span className="text-xs font-medium text-zinc-500">

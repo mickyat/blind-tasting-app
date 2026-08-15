@@ -50,6 +50,7 @@ export default function ResultsView({
   const [scores, setScores] = useState<ScoreRow[]>([])
   const [checklistAnswers, setChecklistAnswers] = useState<ChecklistAnswerRow[]>([])
   const [itemsState, setItemsState] = useState<ItemRow[]>(items)
+  const [includeExternal, setIncludeExternal] = useState(true)
 
   const refresh = useCallback(async () => {
     const { data: parts } = await supabase.from('participant').select('*').eq('event_id', event.id)
@@ -122,20 +123,45 @@ export default function ResultsView({
     )
   }
 
+  const activeCriteria = includeExternal ? externalCriteria : []
+  const activeValues = includeExternal ? externalValues : []
+
   const overallRanked = rankResults(
-    calculateResults(openItems, categories, parameters, scores, externalCriteria, externalValues)
+    calculateResults(openItems, categories, parameters, scores, activeCriteria, activeValues)
   )
   const hasMultipleTypes = itemTypes.length > 1
 
   const itemDetails = new Map(
     openItems.map((item) => [
       item.id,
-      getItemDetail(item, categories, parameters, scores, participants, externalCriteria, externalValues),
+      getItemDetail(item, categories, parameters, scores, participants, activeCriteria, activeValues),
     ])
   )
 
   return (
     <div className="flex flex-col gap-8">
+      {externalCriteria.length > 0 && (
+        <div className="flex gap-2 rounded-xl border border-white/20 p-1">
+          {(
+            [
+              { value: true, label: 'עם קריטריונים חיצוניים' },
+              { value: false, label: 'בלי קריטריונים חיצוניים' },
+            ] as { value: boolean; label: string }[]
+          ).map((opt) => (
+            <button
+              key={String(opt.value)}
+              type="button"
+              onClick={() => setIncludeExternal(opt.value)}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold ${
+                includeExternal === opt.value ? 'bg-white text-zinc-900' : `${theme.muted}`
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <RankingList
         title={hasMultipleTypes ? 'דירוג כללי' : undefined}
         results={overallRanked}
@@ -148,7 +174,7 @@ export default function ResultsView({
           const typeItems = openItems.filter((i) => i.item_type_id === t.id)
           if (typeItems.length === 0) return null
           const typeRanked = rankResults(
-            calculateResults(typeItems, categories, parameters, scores, externalCriteria, externalValues)
+            calculateResults(typeItems, categories, parameters, scores, activeCriteria, activeValues)
           )
           return (
             <RankingList

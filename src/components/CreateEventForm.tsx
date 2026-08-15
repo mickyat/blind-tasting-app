@@ -3,8 +3,14 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createEvent, uploadEventLogo } from '@/app/actions'
-import type { EventTheme, ExternalCriterionCalcType, ParameterKind, ResultsVisibility } from '@/lib/types'
-import { THEME_STYLES } from '@/lib/theme'
+import type {
+  EventTheme,
+  ExternalCriterionCalcType,
+  ParameterKind,
+  ResultsVisibility,
+  ThresholdDirection,
+} from '@/lib/types'
+import { SWATCH_COLORS } from '@/lib/theme'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import { EVENT_TEMPLATES, type EventTemplate } from '@/lib/templates'
 import { saveMyEvent } from '@/components/MyEvents'
@@ -26,7 +32,8 @@ interface CategoryDraft {
 }
 
 interface ThresholdDraft {
-  max: number
+  direction: ThresholdDirection
+  value: number
   score: number
 }
 
@@ -40,7 +47,6 @@ interface ExternalCriterionDraft {
   weight: number
   calcType: ExternalCriterionCalcType
   thresholds: ThresholdDraft[]
-  defaultScore: number
   options: OptionRuleDraft[]
 }
 
@@ -74,8 +80,13 @@ function emptyExternalCriterion(): ExternalCriterionDraft {
     name: '',
     weight: 1,
     calcType: 'manual',
-    thresholds: [{ max: 0, score: 5 }],
-    defaultScore: 1,
+    thresholds: [
+      { direction: 'below', value: 40, score: 5 },
+      { direction: 'below', value: 60, score: 4 },
+      { direction: 'below', value: 80, score: 3 },
+      { direction: 'below', value: 100, score: 2 },
+      { direction: 'above', value: 100, score: 1 },
+    ],
     options: [{ label: '', score: 5 }],
   }
 }
@@ -145,6 +156,10 @@ function themeForTemplate(templateId: string): EventTheme {
   if ((THEME_IDS as string[]).includes(templateId)) return templateId as EventTheme
   return 'default'
 }
+
+// Rotating examples for the item-type name placeholder, so it doesn't imply
+// this app is only for food/drink tastings.
+const ITEM_TYPE_EXAMPLES = ['יצירת אמנות', 'קטע מוזיקלי', 'מאמר', 'סרטון קצר']
 
 const VISIBILITY_OPTIONS: { value: ResultsVisibility; label: string; hint: string }[] = [
   { value: 'manual', label: 'ידני', hint: 'התוצאות ייחשפו רק כשתלחץ על "הצג תוצאות"' },
@@ -290,7 +305,7 @@ export default function CreateEventForm() {
   }
   function addThreshold(ti: number, ei: number) {
     updateExternalCriterion(ti, ei, {
-      thresholds: [...itemTypes[ti].externalCriteria[ei].thresholds, { max: 0, score: 1 }],
+      thresholds: [...itemTypes[ti].externalCriteria[ei].thresholds, { direction: 'below', value: 0, score: 1 }],
     })
   }
   function removeThreshold(ti: number, ei: number, thi: number) {
@@ -448,7 +463,6 @@ export default function CreateEventForm() {
             weight: c.weight,
             calcType: c.calcType,
             thresholds: c.calcType === 'threshold' ? c.thresholds : undefined,
-            defaultScore: c.calcType === 'threshold' ? c.defaultScore : undefined,
             options: c.calcType === 'options' ? c.options : undefined,
           })),
         })),
@@ -476,23 +490,19 @@ export default function CreateEventForm() {
               key={t.id}
               type="button"
               onClick={() => chooseTemplate(t.id)}
-              className={`flex flex-col items-center gap-1 rounded-xl border border-zinc-300 p-4 text-center font-medium ${THEME_STYLES[themeForTemplate(t.id)].bg}`}
+              className={`flex flex-col items-center gap-1 rounded-xl border border-zinc-300 p-4 text-center font-medium ${SWATCH_COLORS[themeForTemplate(t.id)]}`}
             >
-              <span className={`text-base font-semibold ${THEME_STYLES[themeForTemplate(t.id)].accent}`}>
-                {t.label}
-              </span>
-              <span className={`text-xs font-normal ${THEME_STYLES[themeForTemplate(t.id)].muted}`}>
-                תבנית מוכנה
-              </span>
+              <span className="text-base font-semibold text-white">{t.label}</span>
+              <span className="text-xs font-normal text-white/75">תבנית מוכנה</span>
             </button>
           ))}
         </div>
         <button
           type="button"
           onClick={startFromScratch}
-          className="rounded-xl border border-dashed border-zinc-400 px-4 py-3 text-sm font-medium text-zinc-600"
+          className="rounded-xl border-2 border-zinc-900 bg-white px-4 py-3 text-sm font-bold text-zinc-900"
         >
-          התחל מאפס
+          + התחל מאפס
         </button>
       </div>
     )
@@ -503,7 +513,7 @@ export default function CreateEventForm() {
       <button
         type="button"
         onClick={() => setStep('template')}
-        className="self-start text-xs font-medium text-zinc-500 underline"
+        className="self-start rounded-lg border-2 border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700"
       >
         ← חזרה לבחירת תבנית
       </button>
@@ -557,7 +567,7 @@ export default function CreateEventForm() {
               <input
                 value={itemType.name}
                 onChange={(e) => updateItemType(ti, { name: e.target.value })}
-                placeholder={`סוג פריט ${ti + 1} (למשל: יין)`}
+                placeholder={`סוג פריט ${ti + 1} (למשל: ${ITEM_TYPE_EXAMPLES[ti % ITEM_TYPE_EXAMPLES.length]})`}
                 className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base font-semibold focus:border-zinc-500 focus:outline-none"
                 required
               />
@@ -685,16 +695,42 @@ export default function CreateEventForm() {
 
                     {crit.calcType === 'threshold' && (
                       <div className="flex flex-col gap-2">
-                        <span className="text-xs text-zinc-500">טווחי ערך ← ציון (מהנמוך לגבוה)</span>
+                        <span className="text-xs text-zinc-500">
+                          כללי סף ← ציון. הכלל הראשון שמתאים לערך זוכה, לפי הסדר למטה
+                        </span>
                         {crit.thresholds.map((th, thi) => (
-                          <div key={thi} className="flex items-center gap-2">
+                          <div key={thi} className="flex items-end gap-2">
+                            <div className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                              כיוון
+                              <div className="flex gap-1">
+                                {(
+                                  [
+                                    { value: 'below' as ThresholdDirection, label: 'עד' },
+                                    { value: 'above' as ThresholdDirection, label: 'מעל' },
+                                  ]
+                                ).map((opt) => (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => updateThreshold(ti, ei, thi, { direction: opt.value })}
+                                    className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${
+                                      th.direction === opt.value
+                                        ? 'border-zinc-900 bg-zinc-900 text-white'
+                                        : 'border-zinc-300 text-zinc-600'
+                                    }`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                             <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
-                              עד ערך
+                              ערך
                               <input
                                 type="number"
                                 step="any"
-                                value={th.max}
-                                onChange={(e) => updateThreshold(ti, ei, thi, { max: Number(e.target.value) })}
+                                value={th.value}
+                                onChange={(e) => updateThreshold(ti, ei, thi, { value: Number(e.target.value) })}
                                 onFocus={selectOnFocus}
                                 className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                               />
@@ -715,7 +751,7 @@ export default function CreateEventForm() {
                               onClick={() => removeThreshold(ti, ei, thi)}
                               disabled={crit.thresholds.length <= 1}
                               aria-label="הסר סף"
-                              className="flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
                             >
                               ✕
                             </button>
@@ -728,17 +764,6 @@ export default function CreateEventForm() {
                         >
                           + הוסף סף
                         </button>
-                        <label className="flex items-center gap-2 text-xs text-zinc-500">
-                          ציון מעל כל הספים
-                          <input
-                            type="number"
-                            step="any"
-                            value={crit.defaultScore}
-                            onChange={(e) => updateExternalCriterion(ti, ei, { defaultScore: Number(e.target.value) })}
-                            onFocus={selectOnFocus}
-                            className="w-20 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
-                          />
-                        </label>
                       </div>
                     )}
 

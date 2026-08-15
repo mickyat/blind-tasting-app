@@ -52,6 +52,17 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
       ? await supabase.from('parameter').select('*').in('category_id', categoryIds)
       : { data: [] }
 
+  const { data: externalCriteria } =
+    itemTypeIds.length > 0
+      ? await supabase.from('external_criterion').select('*').in('item_type_id', itemTypeIds).order('sort_order')
+      : { data: [] }
+
+  const itemIds = (items ?? []).map((i) => i.id)
+  const { data: externalValues } =
+    itemIds.length > 0
+      ? await supabase.from('item_external_value').select('*').in('item_id', itemIds)
+      : { data: [] }
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
       <header className="flex flex-col gap-1 text-center">
@@ -64,6 +75,8 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
         items={items ?? []}
         categories={categories ?? []}
         parameters={parameters ?? []}
+        externalCriteria={externalCriteria ?? []}
+        externalValues={externalValues ?? []}
       />
     </main>
   )

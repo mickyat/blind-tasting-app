@@ -1,7 +1,13 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { EventTheme, ExternalCriterionCalcType, ParameterKind, ResultsVisibility } from '@/lib/types'
+import type {
+  EventTheme,
+  ExternalCriterionCalcType,
+  ParameterKind,
+  ResultsVisibility,
+  ThresholdDirection,
+} from '@/lib/types'
 
 interface ParameterInput {
   name: string
@@ -23,8 +29,7 @@ interface ExternalCriterionInput {
   name: string
   weight: number
   calcType: ExternalCriterionCalcType
-  thresholds?: { max: number; score: number }[]
-  defaultScore?: number
+  thresholds?: { direction: ThresholdDirection; value: number; score: number }[]
   options?: { label: string; score: number }[]
 }
 
@@ -134,9 +139,6 @@ export async function createEvent(input: CreateEventInput) {
       if (c.calcType === 'threshold') {
         if (!c.thresholds || c.thresholds.length === 0) {
           return { error: `צריך לפחות סף אחד עבור "${c.name}"` }
-        }
-        if (!Number.isFinite(c.defaultScore)) {
-          return { error: `צריך ציון ברירת מחדל עבור "${c.name}"` }
         }
       }
       if (c.calcType === 'options') {
@@ -264,7 +266,7 @@ export async function createEvent(input: CreateEventInput) {
           calc_type: c.calcType,
           config:
             c.calcType === 'threshold'
-              ? { thresholds: c.thresholds, defaultScore: c.defaultScore }
+              ? { thresholds: c.thresholds }
               : c.calcType === 'options'
                 ? { options: c.options }
                 : null,
@@ -363,5 +365,60 @@ export async function openItemResults(hostToken: string, itemId: string) {
 
   const { error } = await supabase.from('item').update({ results_open: true }).eq('id', itemId)
   if (error) return { error: 'שגיאה בפתיחת התוצאות לפריט' }
+  return { ok: true }
+}
+
+// Lets the organizer fill in / edit an external criterion's value for one
+// item after the event was created (there's no other way to change these
+// once the event exists). Host-token-authenticated, same pattern as
+// openItemResults: verify the item and the criterion both belong to the
+// event this host_token owns before writing.
+export async function updateExternalValue(hostToken: string, itemId: string, criterionId: string, rawValue: string) {
+  const supabase = createAdminClient()
+
+  const { data: admin } = await supabase
+    .from('event_admin')
+    .select('event_id')
+    .eq('host_token', hostToken)
+    .maybeSingle()
+
+  if (!admin) return { error: 'קישור ניהול לא תקין' }
+
+  const { data: item } = await supabase.from('item').select('id, item_type_id').eq('id', itemId).maybeSingle()
+  if (!item) return { error: 'הפריט לא נמצא' }
+
+  const { data: criterion } = await supabase
+    .from('external_criterion')
+    .select('id, item_type_id')
+    .eq('id', criterionId)
+    .maybeSingle()
+  if (!criterion || criterion.item_type_id !== item.item_type_id) {
+    return { error: 'הקריטריון לא שייך לפריט הזה' }
+  }
+
+  const { data: itemType } = await supabase
+    .from('item_type')
+    .select('event_id')
+    .eq('id', item.item_type_id)
+    .maybeSingle()
+  if (!itemType || itemType.event_id !== admin.event_id) {
+    return { error: 'הפריט לא שייך לאירוע הזה' }
+  }
+
+  const trimmed = rawValue.trim()
+  if (!trimmed) {
+    const { error } = await supabase
+      .from('item_external_value')
+      .delete()
+      .eq('item_id', itemId)
+      .eq('criterion_id', criterionId)
+    if (error) return { error: 'שגיאה במחיקת הערך' }
+    return { ok: true }
+  }
+
+  const { error } = await supabase
+    .from('item_external_value')
+    .upsert({ item_id: itemId, criterion_id: criterionId, raw_value: trimmed }, { onConflict: 'item_id,criterion_id' })
+  if (error) return { error: 'שגיאה בשמירת הערך' }
   return { ok: true }
 }
