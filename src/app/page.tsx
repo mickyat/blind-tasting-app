@@ -7,7 +7,7 @@ export default function Home() {
       <header className="flex flex-col gap-1 text-center">
         <h1 className="text-2xl font-bold text-zinc-900">פאנל הטעם</h1>
         <p className="text-sm text-zinc-500">
-          צור אירוע הטעימה עיוורת, שתף קישור עם המשתתפים, וקבל תוצאות מחושבות בזמן אמת
+          צור אירוע טעימה עיוורת, שתף קישור עם המשתתפים, וקבל תוצאות מחושבות בזמן אמת
         </p>
       </header>
       <MyEvents />
