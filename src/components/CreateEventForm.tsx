@@ -504,6 +504,7 @@ export default function CreateEventForm() {
                   src={TEMPLATE_IMAGES[t.id] ?? TEMPLATE_IMAGES[themeForTemplate(t.id)]}
                   alt=""
                   fill
+                  priority
                   sizes="(max-width: 480px) 50vw, 220px"
                   className="object-cover"
                 />
