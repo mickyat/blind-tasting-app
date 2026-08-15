@@ -10,8 +10,9 @@ import type {
   ResultsVisibility,
   ThresholdDirection,
 } from '@/lib/types'
+import Image from 'next/image'
 import { SWATCH_COLORS } from '@/lib/theme'
-import TemplateIllustration from '@/components/TemplateIllustration'
+import { TEMPLATE_IMAGES } from '@/lib/templateImages'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import { EVENT_TEMPLATES, type EventTemplate } from '@/lib/templates'
 import { saveMyEvent } from '@/components/MyEvents'
@@ -499,7 +500,13 @@ export default function CreateEventForm() {
               className={`relative flex h-28 flex-col items-stretch justify-end overflow-hidden rounded-xl border border-zinc-300 text-center font-medium ${SWATCH_COLORS[themeForTemplate(t.id)]}`}
             >
               <div className="absolute inset-0">
-                <TemplateIllustration theme={themeForTemplate(t.id)} />
+                <Image
+                  src={TEMPLATE_IMAGES[t.id] ?? TEMPLATE_IMAGES[themeForTemplate(t.id)]}
+                  alt=""
+                  fill
+                  sizes="(max-width: 480px) 50vw, 220px"
+                  className="object-cover"
+                />
               </div>
               <div className="relative z-10 flex flex-col gap-0.5 bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3 pt-8">
                 <span className="text-base font-semibold text-white">{t.label}</span>

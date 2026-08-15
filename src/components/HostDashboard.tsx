@@ -238,6 +238,14 @@ export default function HostDashboard({
             {copied === 'results' ? 'הועתק!' : 'העתק'}
           </button>
         </div>
+        <a
+          href={`/e/${event.share_token}/results`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-center text-xs font-semibold text-zinc-700"
+        >
+          מעבר למסך התוצאות ←
+        </a>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -319,6 +327,7 @@ export default function HostDashboard({
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  capture="environment"
                   onChange={(e) => handlePhotoChange(item.id, e)}
                   disabled={photoUploading[item.id]}
                   className="text-xs text-zinc-600"
