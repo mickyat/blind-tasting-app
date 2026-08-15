@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { THEME_STYLES } from '@/lib/theme'
+import OrganizerOrParticipantLink from '@/components/OrganizerOrParticipantLink'
 import {
   buildAnsweredSet,
   calculateResults,
@@ -116,9 +116,7 @@ export default function ResultsView({
         ) : (
           <p className={`text-base font-medium ${theme.accent}`}>מחכים שהמארגן יפתח את התוצאות</p>
         )}
-        <Link href="/" className={`text-xs underline ${theme.muted}`}>
-          את/ה המארגן/ת של האירוע? חזרה לדף הבית
-        </Link>
+        <OrganizerOrParticipantLink eventId={event.id} mutedClass={theme.muted} waiting />
       </div>
     )
   }
@@ -190,7 +188,9 @@ export default function ResultsView({
       {pendingItems.length > 0 && (
         <div className="flex flex-col gap-2 rounded-xl border border-dashed border-white/30 p-4">
           <span className={`text-xs font-medium ${theme.accent}`}>טרם פורסמו</span>
-          <span className={`text-sm ${theme.muted}`}>{pendingItems.map((i) => i.label).join(', ')}</span>
+          <span className={`text-sm ${theme.muted}`}>
+            {pendingItems.map((i) => (i.custom_label ? `${i.label} — ${i.custom_label}` : i.label)).join(', ')}
+          </span>
         </div>
       )}
 
@@ -203,10 +203,28 @@ export default function ResultsView({
         theme={theme}
       />
 
-      <Link href="/" className={`text-center text-xs underline ${theme.muted}`}>
-        את/ה המארגן/ת של האירוע? חזרה לדף הבית
-      </Link>
+      <OrganizerOrParticipantLink eventId={event.id} mutedClass={theme.muted} />
     </div>
+  )
+}
+
+// The organizer sets these post-creation (host dashboard, §4) once judging
+// is over - the item's `label` itself stays whatever anonymous tag the
+// organizer used to keep tasting blind (e.g. "פריט 1"), so this shows the
+// revealed real identity alongside it rather than replacing it outright.
+function ItemIdentity({ item }: { item: ItemRow }) {
+  if (!item.image_url && !item.custom_label) return <>{item.label}</>
+  return (
+    <span className="inline-flex items-center gap-2 align-middle">
+      {item.image_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.image_url} alt="" className="h-8 w-8 rounded-md border border-zinc-200 object-cover" />
+      )}
+      <span>
+        {item.label}
+        {item.custom_label && <span className="text-zinc-500"> — {item.custom_label}</span>}
+      </span>
+    </span>
   )
 }
 
@@ -232,6 +250,8 @@ function RankingList({
     })
   }
 
+  const maxScore = Math.max(1e-9, ...results.map((r) => r.finalScore ?? 0))
+
   return (
     <div className="flex flex-col gap-3">
       {title && <h2 className={`text-sm font-semibold ${theme.accent}`}>{title}</h2>}
@@ -243,18 +263,40 @@ function RankingList({
             detail.externalContributions.length > 0 ||
             detail.participantScores.length > 0)
         const isOpen = expanded.has(r.item.id)
+        const barPercent = r.finalScore !== null ? Math.max(4, (r.finalScore / maxScore) * 100) : 0
         return (
           <div
             key={r.item.id}
-            className={`rounded-xl border p-4 ${i === 0 ? 'border-amber-400 bg-amber-50' : 'border-zinc-300 bg-white'}`}
+            className={`relative rounded-xl border p-4 ${
+              i === 0 ? 'animate-winner-glow border-amber-400 bg-amber-50' : 'border-zinc-300 bg-white'
+            }`}
           >
+            {i === 0 && (
+              <>
+                <span className="animate-sparkle absolute -top-1 right-6 text-sm" style={{ animationDelay: '0s' }}>
+                  ✨
+                </span>
+                <span
+                  className="animate-sparkle absolute -top-1 right-14 text-xs"
+                  style={{ animationDelay: '0.6s' }}
+                >
+                  ✨
+                </span>
+                <span
+                  className="animate-sparkle absolute -top-1 right-20 text-sm"
+                  style={{ animationDelay: '1.2s' }}
+                >
+                  ✨
+                </span>
+              </>
+            )}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold text-zinc-400">#{i + 1}</span>
                 <div className="flex flex-col">
                   <span className="text-base font-semibold text-zinc-900">
                     {i === 0 && '🏆 '}
-                    {r.item.label}
+                    <ItemIdentity item={r.item} />
                   </span>
                   {r.participantCount > 0 && (
                     <span className="text-xs text-zinc-500">{r.participantCount} דירוגים</span>
@@ -276,6 +318,14 @@ function RankingList({
                 )}
               </div>
             </div>
+            {r.finalScore !== null && (
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+                <div
+                  className={`h-full rounded-full ${i === 0 ? 'bg-amber-400' : 'bg-zinc-400'}`}
+                  style={{ width: `${barPercent}%` }}
+                />
+              </div>
+            )}
             {isOpen && detail && <ItemDetailView detail={detail} />}
           </div>
         )
@@ -329,7 +379,14 @@ function ItemDetailView({ detail }: { detail: ItemDetail }) {
           <ul className="flex flex-col gap-0.5">
             {detail.participantScores.map((ps) => (
               <li key={ps.participant.id} className="flex items-center justify-between text-sm">
-                <span className="text-zinc-700">{ps.participant.nickname}</span>
+                <span className="text-zinc-700">
+                  {ps.participant.nickname}
+                  {detail.closest?.participant.id === ps.participant.id && (
+                    <span className="mr-1 text-amber-500" title="הכי קרוב לממוצע">
+                      ⭐
+                    </span>
+                  )}
+                </span>
                 <span className="font-medium text-zinc-900">{ps.score.toFixed(2)}</span>
               </li>
             ))}
@@ -339,7 +396,7 @@ function ItemDetailView({ detail }: { detail: ItemDetail }) {
 
       {detail.closest && (
         <p className="text-xs text-zinc-500">
-          הכי קרוב לממוצע:{' '}
+          ⭐ הכי קרוב לממוצע:{' '}
           <span className="font-medium text-zinc-700">{detail.closest.participant.nickname}</span> (
           {detail.closest.score.toFixed(2)})
         </p>
@@ -379,7 +436,9 @@ function DescriptiveSummary({
 
         return (
           <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white p-4">
-            <h3 className="text-sm font-semibold text-zinc-800">{item.label}</h3>
+            <h3 className="text-sm font-semibold text-zinc-800">
+              <ItemIdentity item={item} />
+            </h3>
             {itemParams.map((param) => {
               const counts = new Map<string, number>()
               for (const opt of param.options ?? []) counts.set(opt, 0)

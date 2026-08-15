@@ -304,6 +304,7 @@ export async function createEvent(input: CreateEventInput) {
   }
 
   return {
+    eventId: event.id as string,
     shareToken: event.share_token as string,
     hostToken: admin.host_token as string,
   }
@@ -420,5 +421,87 @@ export async function updateExternalValue(hostToken: string, itemId: string, cri
     .from('item_external_value')
     .upsert({ item_id: itemId, criterion_id: criterionId, raw_value: trimmed }, { onConflict: 'item_id,criterion_id' })
   if (error) return { error: 'שגיאה בשמירת הערך' }
+  return { ok: true }
+}
+
+async function verifyHostOwnsItem(
+  supabase: ReturnType<typeof createAdminClient>,
+  hostToken: string,
+  itemId: string
+) {
+  const { data: admin } = await supabase
+    .from('event_admin')
+    .select('event_id')
+    .eq('host_token', hostToken)
+    .maybeSingle()
+  if (!admin) return { error: 'קישור ניהול לא תקין' } as const
+
+  const { data: item } = await supabase.from('item').select('id, item_type_id').eq('id', itemId).maybeSingle()
+  if (!item) return { error: 'הפריט לא נמצא' } as const
+
+  const { data: itemType } = await supabase
+    .from('item_type')
+    .select('event_id')
+    .eq('id', item.item_type_id)
+    .maybeSingle()
+  if (!itemType || itemType.event_id !== admin.event_id) return { error: 'הפריט לא שייך לאירוע הזה' } as const
+
+  return { ok: true } as const
+}
+
+// Organizer-only, set after the event was already created (there's no
+// other way to attach these). No OCR/processing of the photo - it's stored
+// and shown exactly as uploaded, same as the event logo. Reuses the
+// existing public `event-logos` bucket rather than provisioning a new one.
+export async function uploadItemPhoto(hostToken: string, itemId: string, formData: FormData) {
+  const supabase = createAdminClient()
+
+  const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)
+  if ('error' in ownership) return ownership
+
+  const file = formData.get('file')
+  if (!(file instanceof File)) return { error: 'לא נבחר קובץ' }
+  if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+    return { error: 'סוג קובץ לא נתמך (רק PNG / JPEG / WebP / SVG)' }
+  }
+  if (file.size > MAX_LOGO_BYTES) {
+    return { error: 'הקובץ גדול מדי (עד 2MB)' }
+  }
+
+  const ext = file.name.split('.').pop() || 'png'
+  const path = `${crypto.randomUUID()}.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from('event-logos')
+    .upload(path, file, { contentType: file.type })
+  if (uploadError) return { error: 'שגיאה בהעלאת התמונה, נסה שוב' }
+
+  const { data } = supabase.storage.from('event-logos').getPublicUrl(path)
+
+  const { error } = await supabase.from('item').update({ image_url: data.publicUrl }).eq('id', itemId)
+  if (error) return { error: 'שגיאה בשמירת התמונה' }
+  return { url: data.publicUrl }
+}
+
+export async function removeItemPhoto(hostToken: string, itemId: string) {
+  const supabase = createAdminClient()
+  const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)
+  if ('error' in ownership) return ownership
+
+  const { error } = await supabase.from('item').update({ image_url: null }).eq('id', itemId)
+  if (error) return { error: 'שגיאה בהסרת התמונה' }
+  return { ok: true }
+}
+
+export async function updateItemLabel(hostToken: string, itemId: string, customLabel: string) {
+  const supabase = createAdminClient()
+  const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)
+  if ('error' in ownership) return ownership
+
+  const trimmed = customLabel.trim()
+  const { error } = await supabase
+    .from('item')
+    .update({ custom_label: trimmed || null })
+    .eq('id', itemId)
+  if (error) return { error: 'שגיאה בשמירת התיאור' }
   return { ok: true }
 }

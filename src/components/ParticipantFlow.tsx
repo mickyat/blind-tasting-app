@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { THEME_STYLES } from '@/lib/theme'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import { getLastCategory, orderItemsByType } from '@/lib/results'
+import OrganizerOrParticipantLink from '@/components/OrganizerOrParticipantLink'
 import type {
   CategoryRow,
   EventRow,
@@ -523,9 +524,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
         למסך התוצאות
       </Link>
 
-      <Link href="/" className={`text-center text-xs underline ${theme.muted}`}>
-        את/ה המארגן/ת של האירוע? חזרה לדף הבית
-      </Link>
+      <OrganizerOrParticipantLink eventId={event.id} mutedClass={theme.muted} waiting />
     </div>
   )
 }
@@ -581,9 +580,7 @@ function JoinForm({
       <button type="submit" disabled={pending} className={PRIMARY_BUTTON_CLASS}>
         {pending ? 'מצטרף…' : 'הצטרף להטעימה'}
       </button>
-      <Link href="/" className={`text-center text-xs underline ${theme.muted}`}>
-        את/ה המארגן/ת של האירוע? חזרה לדף הבית
-      </Link>
+      <OrganizerOrParticipantLink eventId={event.id} mutedClass={theme.muted} />
     </form>
   )
 }

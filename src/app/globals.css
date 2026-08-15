@@ -45,3 +45,36 @@ body {
 .animate-shake {
   animation: shake 0.4s ease-in-out;
 }
+
+/* Gentle continuous sparkle/glow for the winning item - deliberately a
+   looping, low-amplitude effect (not a one-shot burst) since the results
+   card can re-render often on live score updates and a replaying burst
+   would get spammy. */
+@keyframes sparkle-float {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-16px) scale(1.1);
+    opacity: 0;
+  }
+}
+.animate-sparkle {
+  animation: sparkle-float 1.8s ease-in-out infinite;
+}
+@keyframes winner-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.7);
+  }
+}
+.animate-winner-glow {
+  animation: winner-glow 2.2s ease-in-out infinite;
+}

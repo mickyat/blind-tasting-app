@@ -37,6 +37,8 @@ export interface ItemRow {
   label: string
   sort_order: number
   results_open: boolean
+  image_url: string | null
+  custom_label: string | null
 }
 
 export interface CategoryRow {

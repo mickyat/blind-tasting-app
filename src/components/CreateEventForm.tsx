@@ -11,6 +11,7 @@ import type {
   ThresholdDirection,
 } from '@/lib/types'
 import { SWATCH_COLORS } from '@/lib/theme'
+import TemplateIllustration from '@/components/TemplateIllustration'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import { EVENT_TEMPLATES, type EventTemplate } from '@/lib/templates'
 import { saveMyEvent } from '@/components/MyEvents'
@@ -475,7 +476,12 @@ export default function CreateEventForm() {
         setError('שגיאה לא צפויה, נסה שוב')
         return
       }
-      saveMyEvent({ title, hostToken: result.hostToken, createdAt: new Date().toISOString() })
+      saveMyEvent({
+        title,
+        hostToken: result.hostToken,
+        eventId: 'eventId' in result ? result.eventId : undefined,
+        createdAt: new Date().toISOString(),
+      })
       router.push(`/host/${result.hostToken}`)
     })
   }
@@ -490,10 +496,15 @@ export default function CreateEventForm() {
               key={t.id}
               type="button"
               onClick={() => chooseTemplate(t.id)}
-              className={`flex flex-col items-center gap-1 rounded-xl border border-zinc-300 p-4 text-center font-medium ${SWATCH_COLORS[themeForTemplate(t.id)]}`}
+              className={`relative flex h-28 flex-col items-stretch justify-end overflow-hidden rounded-xl border border-zinc-300 text-center font-medium ${SWATCH_COLORS[themeForTemplate(t.id)]}`}
             >
-              <span className="text-base font-semibold text-white">{t.label}</span>
-              <span className="text-xs font-normal text-white/75">תבנית מוכנה</span>
+              <div className="absolute inset-0">
+                <TemplateIllustration theme={themeForTemplate(t.id)} />
+              </div>
+              <div className="relative z-10 flex flex-col gap-0.5 bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3 pt-8">
+                <span className="text-base font-semibold text-white">{t.label}</span>
+                <span className="text-xs font-normal text-white/75">תבנית מוכנה</span>
+              </div>
             </button>
           ))}
         </div>

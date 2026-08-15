@@ -53,7 +53,11 @@ create table item (
   item_type_id uuid not null references item_type(id) on delete cascade,
   label text not null,
   sort_order int not null default 0,
-  results_open boolean not null default false
+  results_open boolean not null default false,
+  -- Organizer-only, set after creation via the host dashboard (like the
+  -- event logo, uploaded server-side, no OCR/processing of the image).
+  image_url text,
+  custom_label text
 );
 create index item_item_type_id_idx on item(item_type_id);
 

@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { openResults, openItemResults, updateExternalValue } from '@/app/actions'
+import {
+  openResults,
+  openItemResults,
+  updateExternalValue,
+  uploadItemPhoto,
+  removeItemPhoto,
+  updateItemLabel,
+} from '@/app/actions'
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import type {
@@ -71,6 +78,46 @@ export default function HostDashboard({
     if ('ok' in result) {
       setExternalSaved((prev) => ({ ...prev, [key]: true }))
       setTimeout(() => setExternalSaved((prev) => ({ ...prev, [key]: false })), 1500)
+    }
+  }
+
+  const [labelState, setLabelState] = useState<Record<string, string>>(() =>
+    Object.fromEntries(items.map((i) => [i.id, i.custom_label ?? '']))
+  )
+  const [labelSaving, setLabelSaving] = useState<Record<string, boolean>>({})
+  const [photoUploading, setPhotoUploading] = useState<Record<string, boolean>>({})
+  const [photoError, setPhotoError] = useState<Record<string, string>>({})
+
+  async function saveLabel(itemId: string, value: string) {
+    setLabelSaving((prev) => ({ ...prev, [itemId]: true }))
+    await updateItemLabel(hostToken, itemId, value)
+    setLabelSaving((prev) => ({ ...prev, [itemId]: false }))
+  }
+
+  async function handlePhotoChange(itemId: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoError((prev) => ({ ...prev, [itemId]: '' }))
+    setPhotoUploading((prev) => ({ ...prev, [itemId]: true }))
+    const fd = new FormData()
+    fd.append('file', file)
+    const result = await uploadItemPhoto(hostToken, itemId, fd)
+    setPhotoUploading((prev) => ({ ...prev, [itemId]: false }))
+    if ('error' in result && result.error) {
+      setPhotoError((prev) => ({ ...prev, [itemId]: result.error as string }))
+      return
+    }
+    if ('url' in result && result.url) {
+      setItemsState((prev) => prev.map((i) => (i.id === itemId ? { ...i, image_url: result.url as string } : i)))
+    }
+  }
+
+  async function handleRemovePhoto(itemId: string) {
+    setPhotoUploading((prev) => ({ ...prev, [itemId]: true }))
+    const result = await removeItemPhoto(hostToken, itemId)
+    setPhotoUploading((prev) => ({ ...prev, [itemId]: false }))
+    if ('ok' in result) {
+      setItemsState((prev) => prev.map((i) => (i.id === itemId ? { ...i, image_url: null } : i)))
     }
   }
 
@@ -215,8 +262,12 @@ export default function HostDashboard({
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{p.nickname}</span>
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs ${isDone ? 'text-green-600' : 'text-zinc-400'}`}>
-                        {doneItems.length}/{itemsState.length} {isDone ? '✓ סיים' : ''}
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          isDone ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
+                        {isDone ? '✓ סיים' : `⏳ ${doneItems.length}/${itemsState.length}`}
                       </span>
                       {!isDone && (
                         <button
@@ -239,6 +290,57 @@ export default function HostDashboard({
             })}
           </ul>
         )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <h2 className="text-sm font-medium text-zinc-700">תמונה/תיאור לכל פריט (מוצג בתוצאות במקום &quot;פריט מספר X&quot;)</h2>
+        {itemsState.map((item) => (
+          <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-3">
+            <span className="text-sm font-medium text-zinc-800">{item.label}</span>
+            <div className="flex items-center gap-3">
+              {item.image_url ? (
+                <div className="flex items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.image_url}
+                    alt=""
+                    className="h-14 w-14 rounded-lg border border-zinc-300 object-cover bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePhoto(item.id)}
+                    disabled={photoUploading[item.id]}
+                    className="rounded-lg border border-zinc-300 px-2 py-1.5 text-xs font-medium text-zinc-600 disabled:opacity-50"
+                  >
+                    הסר תמונה
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={(e) => handlePhotoChange(item.id, e)}
+                  disabled={photoUploading[item.id]}
+                  className="text-xs text-zinc-600"
+                />
+              )}
+              {photoUploading[item.id] && <span className="text-xs text-zinc-400">מעלה…</span>}
+            </div>
+            {photoError[item.id] && <p className="text-xs text-red-600">{photoError[item.id]}</p>}
+            <label className="flex flex-col gap-1 text-xs text-zinc-500">
+              <span className="flex items-center gap-1">
+                תיאור חופשי (למשל: יין X, 120 ש&quot;ח)
+                {labelSaving[item.id] && <span className="text-zinc-400">שומר…</span>}
+              </span>
+              <input
+                value={labelState[item.id] ?? ''}
+                onChange={(e) => setLabelState((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                onBlur={(e) => saveLabel(item.id, e.target.value)}
+                className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+              />
+            </label>
+          </div>
+        ))}
       </div>
 
       {externalCriteria.length > 0 && (

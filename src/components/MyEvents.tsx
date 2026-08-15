@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 interface SavedEvent {
   title: string
   hostToken: string
+  eventId?: string
   createdAt: string
 }
 
@@ -24,6 +25,14 @@ export function saveMyEvent(entry: SavedEvent) {
   if (typeof window === 'undefined') return
   const updated = [entry, ...getMyEvents().filter((e) => e.hostToken !== entry.hostToken)].slice(0, 50)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+}
+
+// Lets a participant-facing screen check "is the person looking at this on
+// their own device the organizer?" - only works if they created the event
+// from this same browser (host_token was saved locally at creation time,
+// there's no login system to check against instead).
+export function findHostTokenForEvent(eventId: string): string | null {
+  return getMyEvents().find((e) => e.eventId === eventId)?.hostToken ?? null
 }
 
 export default function MyEvents() {
