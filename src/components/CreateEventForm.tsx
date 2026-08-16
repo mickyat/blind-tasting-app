@@ -517,6 +517,25 @@ export default function CreateEventForm() {
         <div className="grid grid-cols-2 gap-3">
           {EVENT_TEMPLATES.map((tpl) => {
             const image = TEMPLATE_IMAGES[tpl.id] ?? TEMPLATE_IMAGES[themeForTemplate(tpl.id)]
+            // The no-photo templates (currently just general_vote) get a
+            // full-width tile with a purpose-made gradient instead of the
+            // photo-scrim treatment, which looked muddy without a real
+            // image behind it - same height as the photo tiles so it still
+            // reads as an equal option, not a lesser one.
+            if (!image) {
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => chooseTemplate(tpl.id)}
+                  className="col-span-2 flex h-28 flex-col items-center justify-center gap-1 rounded-xl border border-amber-300 bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-700 text-center font-medium"
+                >
+                  <span className="text-5xl drop-shadow-sm">🏆</span>
+                  <span className="text-base font-semibold text-white drop-shadow-sm">{templateLabel(tRoot, tpl.id)}</span>
+                  <span className="text-xs font-normal text-white/80">{t('template.readyBadge')}</span>
+                </button>
+              )
+            }
             return (
               <button
                 key={tpl.id}
@@ -525,19 +544,15 @@ export default function CreateEventForm() {
                 className={`relative flex h-28 flex-col items-stretch justify-end overflow-hidden rounded-xl border border-zinc-300 text-center font-medium ${SWATCH_COLORS[themeForTemplate(tpl.id)]}`}
               >
                 <div className="absolute inset-0">
-                  {image ? (
-                    <Image
-                      src={image}
-                      alt=""
-                      fill
-                      priority
-                      placeholder="blur"
-                      sizes="(max-width: 480px) 50vw, 220px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-4xl">🏆</div>
-                  )}
+                  <Image
+                    src={image}
+                    alt=""
+                    fill
+                    priority
+                    placeholder="blur"
+                    sizes="(max-width: 480px) 50vw, 220px"
+                    className="object-cover"
+                  />
                 </div>
                 <div className="relative z-10 flex flex-col gap-0.5 bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3 pt-8">
                   <span className="text-base font-semibold text-white">{templateLabel(tRoot, tpl.id)}</span>
@@ -546,14 +561,15 @@ export default function CreateEventForm() {
               </button>
             )
           })}
+          <button
+            type="button"
+            onClick={startFromScratch}
+            className="col-span-2 flex h-28 flex-col items-center justify-center gap-1 rounded-xl border-2 border-zinc-900 bg-white text-center"
+          >
+            <span className="text-4xl font-bold text-zinc-900">+</span>
+            <span className="text-base font-bold text-zinc-900">{t('template.startFromScratch')}</span>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={startFromScratch}
-          className="rounded-xl border-2 border-zinc-900 bg-white px-4 py-3 text-sm font-bold text-zinc-900"
-        >
-          {t('template.startFromScratch')}
-        </button>
       </div>
     )
   }
