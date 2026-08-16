@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "title": "TastePanel — Blind Tasting Events",
+    "description": "TastePanel - create blind tasting events (wine, meat, beer, and more) and share live, auto-calculated results"
+  },
+  "home": {
+    "title": "TastePanel",
+    "subtitle": "Create a blind tasting event, share a link with your guests, and get live, auto-calculated results"
+  },
+  "localeSwitcher": {
+    "he": "עברית",
+    "en": "English"
+  }
+}
