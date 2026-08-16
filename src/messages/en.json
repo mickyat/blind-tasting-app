@@ -546,6 +546,23 @@
           }
         }
       }
+    },
+    "general_vote": {
+      "label": "General Competition",
+      "categories": {
+        "originality": {
+          "name": "Originality",
+          "parameters": { "originality": { "name": "Originality" } }
+        },
+        "execution": {
+          "name": "Execution & Quality",
+          "parameters": { "executionQuality": { "name": "Execution & Quality" } }
+        },
+        "overallImpression": {
+          "name": "Overall Impression",
+          "parameters": { "overallImpression": { "name": "Overall Impression" } }
+        }
+      }
     }
   },
   "aromaOptions": {

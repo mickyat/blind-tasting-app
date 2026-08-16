@@ -515,30 +515,37 @@ export default function CreateEventForm() {
       <div className="flex flex-col gap-4">
         <p className="text-center text-sm text-zinc-500">{t('template.prompt')}</p>
         <div className="grid grid-cols-2 gap-3">
-          {EVENT_TEMPLATES.map((tpl) => (
-            <button
-              key={tpl.id}
-              type="button"
-              onClick={() => chooseTemplate(tpl.id)}
-              className={`relative flex h-28 flex-col items-stretch justify-end overflow-hidden rounded-xl border border-zinc-300 text-center font-medium ${SWATCH_COLORS[themeForTemplate(tpl.id)]}`}
-            >
-              <div className="absolute inset-0">
-                <Image
-                  src={TEMPLATE_IMAGES[tpl.id] ?? TEMPLATE_IMAGES[themeForTemplate(tpl.id)]}
-                  alt=""
-                  fill
-                  priority
-                  placeholder="blur"
-                  sizes="(max-width: 480px) 50vw, 220px"
-                  className="object-cover"
-                />
-              </div>
-              <div className="relative z-10 flex flex-col gap-0.5 bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3 pt-8">
-                <span className="text-base font-semibold text-white">{templateLabel(tRoot, tpl.id)}</span>
-                <span className="text-xs font-normal text-white/75">{t('template.readyBadge')}</span>
-              </div>
-            </button>
-          ))}
+          {EVENT_TEMPLATES.map((tpl) => {
+            const image = TEMPLATE_IMAGES[tpl.id] ?? TEMPLATE_IMAGES[themeForTemplate(tpl.id)]
+            return (
+              <button
+                key={tpl.id}
+                type="button"
+                onClick={() => chooseTemplate(tpl.id)}
+                className={`relative flex h-28 flex-col items-stretch justify-end overflow-hidden rounded-xl border border-zinc-300 text-center font-medium ${SWATCH_COLORS[themeForTemplate(tpl.id)]}`}
+              >
+                <div className="absolute inset-0">
+                  {image ? (
+                    <Image
+                      src={image}
+                      alt=""
+                      fill
+                      priority
+                      placeholder="blur"
+                      sizes="(max-width: 480px) 50vw, 220px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-4xl">🏆</div>
+                  )}
+                </div>
+                <div className="relative z-10 flex flex-col gap-0.5 bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3 pt-8">
+                  <span className="text-base font-semibold text-white">{templateLabel(tRoot, tpl.id)}</span>
+                  <span className="text-xs font-normal text-white/75">{t('template.readyBadge')}</span>
+                </div>
+              </button>
+            )
+          })}
         </div>
         <button
           type="button"

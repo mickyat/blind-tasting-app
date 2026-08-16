@@ -295,6 +295,17 @@ export const EVENT_TEMPLATES: EventTemplate[] = [
       },
     ],
   },
+  // Generic non-food template - costume/cake/talent contests, audience
+  // votes, anything scored by a panel that isn't a tasting. Kept last in
+  // this array so it's always the final tile in the template picker.
+  {
+    id: 'general_vote',
+    categories: [
+      { id: 'originality', weight: 1, parameters: [q('originality')] },
+      { id: 'execution', weight: 1, parameters: [q('executionQuality')] },
+      { id: 'overallImpression', weight: 1, parameters: [q('overallImpression')] },
+    ],
+  },
 ]
 
 type Translate = (key: string) => string

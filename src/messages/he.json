@@ -546,6 +546,23 @@
           }
         }
       }
+    },
+    "general_vote": {
+      "label": "תחרות / הצבעה כללית",
+      "categories": {
+        "originality": {
+          "name": "מקוריות",
+          "parameters": { "originality": { "name": "מקוריות" } }
+        },
+        "execution": {
+          "name": "ביצוע ואיכות",
+          "parameters": { "executionQuality": { "name": "ביצוע ואיכות" } }
+        },
+        "overallImpression": {
+          "name": "רושם כללי",
+          "parameters": { "overallImpression": { "name": "רושם כללי" } }
+        }
+      }
     }
   },
   "aromaOptions": {
