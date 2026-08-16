@@ -52,26 +52,26 @@ function multi(id: string, optionIds: string[], weight = 1): ChecklistParameter 
   return { kind: 'checklist', id, weight, optionIds, multiSelect: true, optionsSource: 'aroma' }
 }
 
+// An independently-composed set of broad aroma families for the checklist -
+// same general idea as any aroma wheel, but our own grouping/wording/count,
+// not reproducing a specific published taxonomy.
 const AROMA_OPTION_IDS = [
   'floral',
-  'greenFruit',
-  'citrusFruit',
+  'citrus',
+  'orchardFruit',
   'stoneFruit',
   'tropicalFruit',
-  'redFruit',
-  'blackFruit',
-  'herbaceous',
-  'herbal',
-  'spice',
-  'ripeFruit',
-  'underripeFruit',
+  'redBerry',
+  'darkFruit',
   'driedFruit',
-  'cookedFruit',
-  'yeastBread',
-  'butterCream',
-  'oak',
-  'vanilla',
-  'bakingSpice',
+  'herbalGreen',
+  'spicy',
+  'earthy',
+  'mineral',
+  'nutty',
+  'toastedOak',
+  'vanillaSweet',
+  'smoky',
 ]
 
 export const EVENT_TEMPLATES: EventTemplate[] = [
