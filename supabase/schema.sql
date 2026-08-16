@@ -26,6 +26,7 @@ create table event (
   theme text not null default 'default'
     check (theme in ('default', 'wine', 'meat', 'beer', 'coffee', 'whiskey', 'cheese', 'sausage', 'burger', 'pizza')),
   logo_url text,
+  prize_description text,
   created_at timestamptz not null default now()
 );
 

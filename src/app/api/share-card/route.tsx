@@ -60,6 +60,7 @@ export async function GET(req: Request) {
   const nickname = searchParams.get('nickname') ?? ''
   const participantScore = searchParams.get('participantScore') ?? ''
   const isClosest = searchParams.get('isClosest') === 'true'
+  const prizeDescription = searchParams.get('prizeDescription') ?? ''
 
   const t = await getTranslations({ locale, namespace: 'shareCard' })
   const { regular: fontRegular, bold: fontBold } = await loadFonts(origin)
@@ -130,6 +131,21 @@ export async function GET(req: Request) {
               </span>
               <span style={{ display: 'flex', color: '#ffffff', fontSize: 48, fontWeight: 700 }}>{score}</span>
             </div>
+            {prizeDescription && (
+              <div
+                style={{
+                  display: 'flex',
+                  color: '#fde68a',
+                  fontSize: 28,
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  maxWidth: 880,
+                  marginTop: 8,
+                }}
+              >
+                🎁 {rtl(prizeDescription)}
+              </div>
+            )}
           </div>
         ) : (
           <div

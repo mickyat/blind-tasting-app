@@ -87,6 +87,11 @@
       "remove": "Remove logo",
       "uploading": "Uploading…"
     },
+    "prize": {
+      "label": "Prize description (optional)",
+      "placeholder": "e.g. Top taster wins a bottle from Winery X",
+      "hint": "Shown next to the winner announcement on the results screen and in the share card"
+    },
     "itemTypes": {
       "heading": "Item types",
       "namePlaceholder": "Item type {n} (e.g. {example})",
@@ -626,6 +631,8 @@
   "resultsView": {
     "eventNotFound": "Event not found",
     "pageSubtitle": "Results",
+    "prizeAnnouncement": "🎁 Prize: {prize}",
+    "createNextEvent": "Create your next event",
     "waitingAfterAllDone": "Waiting for participants to finish rating items",
     "waitingManual": "Waiting for the organizer to open the results",
     "withExternal": "With external criteria",

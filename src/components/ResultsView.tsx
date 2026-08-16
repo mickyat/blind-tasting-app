@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { THEME_STYLES } from '@/lib/theme'
+import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import OrganizerOrParticipantLink from '@/components/OrganizerOrParticipantLink'
 import ShareCardButton from '@/components/ShareCardButton'
 import {
@@ -178,28 +179,39 @@ export default function ResultsView({
       )}
 
       {winnerResult && winnerResult.finalScore !== null && (
-        <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-white/20 p-4">
-          <ShareCardButton
-            type="winner"
-            theme={event.theme}
-            eventTitle={event.title}
-            itemName={itemDisplayName(winnerResult.item)}
-            itemImageUrl={winnerResult.item.image_url}
-            score={winnerResult.finalScore.toFixed(2)}
-          />
-          {myWinnerScore && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-white/20 p-4">
+          {event.prize_description && (
+            <p className={`text-center text-sm font-medium ${theme.accent}`}>
+              {t('prizeAnnouncement', { prize: event.prize_description })}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <ShareCardButton
-              type="participant"
+              type="winner"
               theme={event.theme}
               eventTitle={event.title}
               itemName={itemDisplayName(winnerResult.item)}
               itemImageUrl={winnerResult.item.image_url}
               score={winnerResult.finalScore.toFixed(2)}
-              nickname={participants.find((p) => p.id === myParticipantId)?.nickname ?? ''}
-              participantScore={myWinnerScore.score.toFixed(2)}
-              isClosest={amIClosestForWinner}
+              prizeDescription={event.prize_description}
             />
-          )}
+            {myWinnerScore && (
+              <ShareCardButton
+                type="participant"
+                theme={event.theme}
+                eventTitle={event.title}
+                itemName={itemDisplayName(winnerResult.item)}
+                itemImageUrl={winnerResult.item.image_url}
+                score={winnerResult.finalScore.toFixed(2)}
+                nickname={participants.find((p) => p.id === myParticipantId)?.nickname ?? ''}
+                participantScore={myWinnerScore.score.toFixed(2)}
+                isClosest={amIClosestForWinner}
+              />
+            )}
+          </div>
+          <a href="/" className={`mt-1 text-center ${PRIMARY_BUTTON_CLASS}`}>
+            {t('createNextEvent')}
+          </a>
         </div>
       )}
 

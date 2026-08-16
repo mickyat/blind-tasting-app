@@ -186,6 +186,7 @@ export default function CreateEventForm() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)
+  const [prizeDescription, setPrizeDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -459,6 +460,7 @@ export default function CreateEventForm() {
         resultsVisibility: visibility,
         theme,
         logoUrl,
+        prizeDescription: prizeDescription.trim() || null,
         itemTypes: itemTypes.map((t) => ({
           name: t.name,
           template: t.template,
@@ -589,6 +591,21 @@ export default function CreateEventForm() {
         )}
         {logoUploading && <p className="text-xs text-zinc-500">{t('logo.uploading')}</p>}
         {logoError && <p className="text-xs text-red-600">{logoError}</p>}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <label htmlFor="prizeDescription" className="text-sm font-medium text-zinc-700">
+          {t('prize.label')}
+        </label>
+        <input
+          id="prizeDescription"
+          value={prizeDescription}
+          onChange={(e) => setPrizeDescription(e.target.value)}
+          placeholder={t('prize.placeholder')}
+          maxLength={200}
+          className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
+        />
+        <p className="text-xs text-zinc-400">{t('prize.hint')}</p>
       </section>
 
       <section className="flex flex-col gap-4">

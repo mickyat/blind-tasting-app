@@ -87,6 +87,11 @@
       "remove": "הסר לוגו",
       "uploading": "מעלה…"
     },
+    "prize": {
+      "label": "תיאור פרס (אופציונלי)",
+      "placeholder": "למשל: הטועם המדויק ביותר יזכה בבקבוק מתנה מיקב X",
+      "hint": "יוצג לצד הכרזת המנצח במסך התוצאות ובכרטיס השיתוף"
+    },
     "itemTypes": {
       "heading": "סוגי פריט",
       "namePlaceholder": "סוג פריט {n} (למשל: {example})",
@@ -626,6 +631,8 @@
   "resultsView": {
     "eventNotFound": "אירוע לא נמצא",
     "pageSubtitle": "תוצאות",
+    "prizeAnnouncement": "🎁 הפרס: {prize}",
+    "createNextEvent": "צור את האירוע הבא שלך",
     "waitingAfterAllDone": "מחכים שמשתתפים יסיימו לדרג פריטים",
     "waitingManual": "מחכים שהמארגן יפתח את התוצאות",
     "withExternal": "עם קריטריונים חיצוניים",

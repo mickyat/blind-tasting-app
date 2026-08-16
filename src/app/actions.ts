@@ -52,6 +52,7 @@ interface CreateEventInput {
   itemTypes: ItemTypeInput[]
   theme: EventTheme
   logoUrl: string | null
+  prizeDescription: string | null
 }
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
@@ -166,6 +167,7 @@ export async function createEvent(input: CreateEventInput) {
       results_visibility: input.resultsVisibility,
       theme: input.theme,
       logo_url: input.logoUrl,
+      prize_description: input.prizeDescription,
     })
     .select()
     .single()

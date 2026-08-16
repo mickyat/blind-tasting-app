@@ -14,6 +14,7 @@ interface Props {
   nickname?: string
   participantScore?: string
   isClosest?: boolean
+  prizeDescription?: string | null
   className?: string
 }
 
@@ -35,6 +36,7 @@ export default function ShareCardButton({
   nickname,
   participantScore,
   isClosest,
+  prizeDescription,
   className,
 }: Props) {
   const t = useTranslations('shareCard')
@@ -48,6 +50,7 @@ export default function ShareCardButton({
     if (nickname) params.set('nickname', nickname)
     if (participantScore) params.set('participantScore', participantScore)
     if (isClosest) params.set('isClosest', 'true')
+    if (prizeDescription) params.set('prizeDescription', prizeDescription)
     return `/api/share-card?${params.toString()}`
   }
 

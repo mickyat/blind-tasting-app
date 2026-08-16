@@ -20,6 +20,7 @@ export interface EventRow {
   results_open: boolean
   theme: EventTheme
   logo_url: string | null
+  prize_description: string | null
   created_at: string
 }
 
