@@ -45,6 +45,7 @@ export default function HostDashboard({
   externalValues,
 }: Props) {
   const t = useTranslations('hostDashboard')
+  const tRoot = useTranslations()
   const visibilityLabels: Record<string, string> = {
     manual: t('visibilityManual'),
     after_all_done: t('visibilityAfterAllDone'),
@@ -104,8 +105,8 @@ export default function HostDashboard({
     fd.append('file', file)
     const result = await uploadItemPhoto(hostToken, itemId, fd)
     setPhotoUploading((prev) => ({ ...prev, [itemId]: false }))
-    if ('error' in result && result.error) {
-      setPhotoError((prev) => ({ ...prev, [itemId]: result.error as string }))
+    if ('errorKey' in result) {
+      setPhotoError((prev) => ({ ...prev, [itemId]: tRoot(`errors.${result.errorKey}`, result.errorParams) }))
       return
     }
     if ('url' in result && result.url) {

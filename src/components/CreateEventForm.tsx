@@ -213,8 +213,8 @@ export default function CreateEventForm() {
     fd.append('file', file)
     const result = await uploadEventLogo(fd)
     setLogoUploading(false)
-    if ('error' in result && result.error) {
-      setLogoError(result.error)
+    if ('errorKey' in result) {
+      setLogoError(tRoot(`errors.${result.errorKey}`, result.errorParams))
       return
     }
     if (!('url' in result) || !result.url) {
@@ -481,8 +481,8 @@ export default function CreateEventForm() {
           })),
         })),
       })
-      if ('error' in result && result.error) {
-        setError(result.error)
+      if ('errorKey' in result) {
+        setError(tRoot(`errors.${result.errorKey}`, result.errorParams))
         return
       }
       if (!('hostToken' in result) || !result.hostToken) {

@@ -57,14 +57,22 @@ interface CreateEventInput {
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
 const ALLOWED_LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
 
+// Server actions can't call useTranslations (not a component), so failures
+// return a stable errorKey (+ optional interpolation params) instead of a
+// ready-made string - the client resolves it via t(`errors.${errorKey}`,
+// errorParams) using its own locale. See src/messages/{he,en}.json "errors".
+function err(errorKey: string, errorParams?: Record<string, string>) {
+  return { errorKey, errorParams }
+}
+
 export async function uploadEventLogo(formData: FormData) {
   const file = formData.get('file')
-  if (!(file instanceof File)) return { error: 'לא נבחר קובץ' }
+  if (!(file instanceof File)) return err('noFileSelected')
   if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
-    return { error: 'סוג קובץ לא נתמך (רק PNG / JPEG / WebP / SVG)' }
+    return err('unsupportedFileType')
   }
   if (file.size > MAX_LOGO_BYTES) {
-    return { error: 'הקובץ גדול מדי (עד 2MB)' }
+    return err('fileTooLarge')
   }
 
   const supabase = createAdminClient()
@@ -76,7 +84,7 @@ export async function uploadEventLogo(formData: FormData) {
     .upload(path, file, { contentType: file.type })
 
   if (uploadError) {
-    return { error: 'שגיאה בהעלאת הלוגו, נסה שוב' }
+    return err('logoUploadFailed')
   }
 
   const { data } = supabase.storage.from('event-logos').getPublicUrl(path)
@@ -85,7 +93,7 @@ export async function uploadEventLogo(formData: FormData) {
 
 export async function createEvent(input: CreateEventInput) {
   const title = input.title.trim()
-  if (!title) return { error: 'צריך לתת שם לאירוע' }
+  if (!title) return err('titleRequired')
 
   const itemTypes = input.itemTypes.map((t) => ({
     name: t.name.trim(),
@@ -107,43 +115,43 @@ export async function createEvent(input: CreateEventInput) {
       .filter((c) => c.name),
   }))
 
-  if (itemTypes.length === 0) return { error: 'צריך לפחות סוג פריט אחד' }
+  if (itemTypes.length === 0) return err('atLeastOneItemType')
 
   for (const t of itemTypes) {
-    if (!t.name) return { error: 'צריך שם לכל סוג פריט' }
-    if (t.items.length < 2) return { error: `צריך לפחות שני פריטים תחת "${t.name}"` }
-    if (t.categories.length === 0) return { error: `צריך לפחות קטגוריה אחת תחת "${t.name}"` }
+    if (!t.name) return err('itemTypeNameRequired')
+    if (t.items.length < 2) return err('atLeastTwoItems', { name: t.name })
+    if (t.categories.length === 0) return err('atLeastOneCategory', { name: t.name })
     for (const c of t.categories) {
-      if (!(c.weight > 0)) return { error: `משקל לא תקין עבור קטגוריה "${c.name}"` }
+      if (!(c.weight > 0)) return err('invalidCategoryWeight', { name: c.name })
       if (c.parameters.length === 0) {
-        return { error: `צריך לפחות תת-שאלה אחת בקטגוריה "${c.name}"` }
+        return err('atLeastOneParameter', { name: c.name })
       }
       for (const p of c.parameters) {
         if (p.kind === 'scale') {
-          if (!(p.weight > 0)) return { error: `משקל לא תקין עבור "${p.name}"` }
+          if (!(p.weight > 0)) return err('invalidParameterWeight', { name: p.name })
           if (
             !(Number.isFinite(p.scaleMin) && Number.isFinite(p.scaleMax)) ||
             (p.scaleMax as number) <= (p.scaleMin as number)
           ) {
-            return { error: `טווח סולם לא תקין עבור "${p.name}"` }
+            return err('invalidScaleRange', { name: p.name })
           }
         } else {
           if (!p.options || p.options.filter((o) => o.trim()).length === 0) {
-            return { error: `צריך לפחות אפשרות אחת עבור "${p.name}"` }
+            return err('atLeastOneOption', { name: p.name })
           }
         }
       }
     }
     for (const c of t.externalCriteria) {
-      if (!(c.weight > 0)) return { error: `משקל לא תקין עבור הקריטריון "${c.name}"` }
+      if (!(c.weight > 0)) return err('invalidCriterionWeight', { name: c.name })
       if (c.calcType === 'threshold') {
         if (!c.thresholds || c.thresholds.length === 0) {
-          return { error: `צריך לפחות סף אחד עבור "${c.name}"` }
+          return err('atLeastOneThreshold', { name: c.name })
         }
       }
       if (c.calcType === 'options') {
         if (!c.options || c.options.length === 0) {
-          return { error: `צריך לפחות אפשרות אחת עבור "${c.name}"` }
+          return err('atLeastOneOption', { name: c.name })
         }
       }
     }
@@ -163,7 +171,7 @@ export async function createEvent(input: CreateEventInput) {
     .single()
 
   if (eventError || !event) {
-    return { error: 'שגיאה ביצירת האירוע, נסה שוב' }
+    return err('eventCreationFailed')
   }
 
   const rollback = async () => {
@@ -178,7 +186,7 @@ export async function createEvent(input: CreateEventInput) {
 
   if (adminError || !admin) {
     await rollback()
-    return { error: 'שגיאה ביצירת האירוע, נסה שוב' }
+    return err('eventCreationFailed')
   }
 
   const { data: itemTypeRows, error: itemTypeError } = await supabase
@@ -195,7 +203,7 @@ export async function createEvent(input: CreateEventInput) {
 
   if (itemTypeError || !itemTypeRows) {
     await rollback()
-    return { error: 'שגיאה בהוספת סוגי הפריט, נסה שוב' }
+    return err('itemTypeInsertFailed')
   }
 
   const itemPlan = itemTypes.flatMap((t, i) => t.items.map((item) => ({ typeIndex: i, item })))
@@ -211,7 +219,7 @@ export async function createEvent(input: CreateEventInput) {
     .select()
   if (itemsError || !itemRows) {
     await rollback()
-    return { error: 'שגיאה בהוספת הפריטים, נסה שוב' }
+    return err('itemInsertFailed')
   }
 
   const categoryPlan = itemTypes.flatMap((t, i) => t.categories.map((c) => ({ typeIndex: i, c })))
@@ -229,7 +237,7 @@ export async function createEvent(input: CreateEventInput) {
 
   if (categoriesError || !categoryRows) {
     await rollback()
-    return { error: 'שגיאה בהוספת הקטגוריות, נסה שוב' }
+    return err('categoryInsertFailed')
   }
 
   const parameterPlan = categoryPlan.flatMap(({ c }, ci) => c.parameters.map((p) => ({ ci, p })))
@@ -248,7 +256,7 @@ export async function createEvent(input: CreateEventInput) {
   )
   if (paramsError) {
     await rollback()
-    return { error: 'שגיאה בהוספת השאלות, נסה שוב' }
+    return err('parameterInsertFailed')
   }
 
   const criterionPlan = itemTypes.flatMap((t, i) =>
@@ -277,7 +285,7 @@ export async function createEvent(input: CreateEventInput) {
 
     if (criterionError || !criterionRows) {
       await rollback()
-      return { error: 'שגיאה בהוספת הקריטריונים החיצוניים, נסה שוב' }
+      return err('criterionInsertFailed')
     }
 
     criterionPlan.forEach((entry, idx) => {
@@ -299,7 +307,7 @@ export async function createEvent(input: CreateEventInput) {
     const { error: valuesError } = await supabase.from('item_external_value').insert(externalValueRows)
     if (valuesError) {
       await rollback()
-      return { error: 'שגיאה בהוספת ערכי הקריטריונים, נסה שוב' }
+      return err('externalValueInsertFailed')
     }
   }
 
@@ -322,7 +330,7 @@ export async function openResults(hostToken: string) {
     .eq('host_token', hostToken)
     .maybeSingle()
 
-  if (!admin) return { error: 'קישור ניהול לא תקין' }
+  if (!admin) return err('invalidHostLink')
 
   const { data: types } = await supabase.from('item_type').select('id').eq('event_id', admin.event_id)
   const typeIds = (types ?? []).map((t) => t.id)
@@ -332,11 +340,11 @@ export async function openResults(hostToken: string) {
       .from('item')
       .update({ results_open: true })
       .in('item_type_id', typeIds)
-    if (itemsError) return { error: 'שגיאה בפתיחת התוצאות' }
+    if (itemsError) return err('openResultsFailed')
   }
 
   const { error } = await supabase.from('event').update({ results_open: true }).eq('id', admin.event_id)
-  if (error) return { error: 'שגיאה בפתיחת התוצאות' }
+  if (error) return err('openResultsFailed')
   return { ok: true }
 }
 
@@ -349,10 +357,10 @@ export async function openItemResults(hostToken: string, itemId: string) {
     .eq('host_token', hostToken)
     .maybeSingle()
 
-  if (!admin) return { error: 'קישור ניהול לא תקין' }
+  if (!admin) return err('invalidHostLink')
 
   const { data: item } = await supabase.from('item').select('id, item_type_id').eq('id', itemId).maybeSingle()
-  if (!item) return { error: 'הפריט לא נמצא' }
+  if (!item) return err('itemNotFound')
 
   const { data: itemType } = await supabase
     .from('item_type')
@@ -361,11 +369,11 @@ export async function openItemResults(hostToken: string, itemId: string) {
     .maybeSingle()
 
   if (!itemType || itemType.event_id !== admin.event_id) {
-    return { error: 'הפריט לא שייך לאירוע הזה' }
+    return err('itemNotInEvent')
   }
 
   const { error } = await supabase.from('item').update({ results_open: true }).eq('id', itemId)
-  if (error) return { error: 'שגיאה בפתיחת התוצאות לפריט' }
+  if (error) return err('openItemResultsFailed')
   return { ok: true }
 }
 
@@ -383,10 +391,10 @@ export async function updateExternalValue(hostToken: string, itemId: string, cri
     .eq('host_token', hostToken)
     .maybeSingle()
 
-  if (!admin) return { error: 'קישור ניהול לא תקין' }
+  if (!admin) return err('invalidHostLink')
 
   const { data: item } = await supabase.from('item').select('id, item_type_id').eq('id', itemId).maybeSingle()
-  if (!item) return { error: 'הפריט לא נמצא' }
+  if (!item) return err('itemNotFound')
 
   const { data: criterion } = await supabase
     .from('external_criterion')
@@ -394,7 +402,7 @@ export async function updateExternalValue(hostToken: string, itemId: string, cri
     .eq('id', criterionId)
     .maybeSingle()
   if (!criterion || criterion.item_type_id !== item.item_type_id) {
-    return { error: 'הקריטריון לא שייך לפריט הזה' }
+    return err('criterionNotForItem')
   }
 
   const { data: itemType } = await supabase
@@ -403,7 +411,7 @@ export async function updateExternalValue(hostToken: string, itemId: string, cri
     .eq('id', item.item_type_id)
     .maybeSingle()
   if (!itemType || itemType.event_id !== admin.event_id) {
-    return { error: 'הפריט לא שייך לאירוע הזה' }
+    return err('itemNotInEvent')
   }
 
   const trimmed = rawValue.trim()
@@ -413,14 +421,14 @@ export async function updateExternalValue(hostToken: string, itemId: string, cri
       .delete()
       .eq('item_id', itemId)
       .eq('criterion_id', criterionId)
-    if (error) return { error: 'שגיאה במחיקת הערך' }
+    if (error) return err('deleteValueFailed')
     return { ok: true }
   }
 
   const { error } = await supabase
     .from('item_external_value')
     .upsert({ item_id: itemId, criterion_id: criterionId, raw_value: trimmed }, { onConflict: 'item_id,criterion_id' })
-  if (error) return { error: 'שגיאה בשמירת הערך' }
+  if (error) return err('saveValueFailed')
   return { ok: true }
 }
 
@@ -434,17 +442,17 @@ async function verifyHostOwnsItem(
     .select('event_id')
     .eq('host_token', hostToken)
     .maybeSingle()
-  if (!admin) return { error: 'קישור ניהול לא תקין' } as const
+  if (!admin) return err('invalidHostLink')
 
   const { data: item } = await supabase.from('item').select('id, item_type_id').eq('id', itemId).maybeSingle()
-  if (!item) return { error: 'הפריט לא נמצא' } as const
+  if (!item) return err('itemNotFound')
 
   const { data: itemType } = await supabase
     .from('item_type')
     .select('event_id')
     .eq('id', item.item_type_id)
     .maybeSingle()
-  if (!itemType || itemType.event_id !== admin.event_id) return { error: 'הפריט לא שייך לאירוע הזה' } as const
+  if (!itemType || itemType.event_id !== admin.event_id) return err('itemNotInEvent')
 
   return { ok: true } as const
 }
@@ -457,15 +465,15 @@ export async function uploadItemPhoto(hostToken: string, itemId: string, formDat
   const supabase = createAdminClient()
 
   const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)
-  if ('error' in ownership) return ownership
+  if ('errorKey' in ownership) return ownership
 
   const file = formData.get('file')
-  if (!(file instanceof File)) return { error: 'לא נבחר קובץ' }
+  if (!(file instanceof File)) return err('noFileSelected')
   if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
-    return { error: 'סוג קובץ לא נתמך (רק PNG / JPEG / WebP / SVG)' }
+    return err('unsupportedFileType')
   }
   if (file.size > MAX_LOGO_BYTES) {
-    return { error: 'הקובץ גדול מדי (עד 2MB)' }
+    return err('fileTooLarge')
   }
 
   const ext = file.name.split('.').pop() || 'png'
@@ -473,35 +481,35 @@ export async function uploadItemPhoto(hostToken: string, itemId: string, formDat
   const { error: uploadError } = await supabase.storage
     .from('event-logos')
     .upload(path, file, { contentType: file.type })
-  if (uploadError) return { error: 'שגיאה בהעלאת התמונה, נסה שוב' }
+  if (uploadError) return err('photoUploadFailed')
 
   const { data } = supabase.storage.from('event-logos').getPublicUrl(path)
 
   const { error } = await supabase.from('item').update({ image_url: data.publicUrl }).eq('id', itemId)
-  if (error) return { error: 'שגיאה בשמירת התמונה' }
+  if (error) return err('photoSaveFailed')
   return { url: data.publicUrl }
 }
 
 export async function removeItemPhoto(hostToken: string, itemId: string) {
   const supabase = createAdminClient()
   const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)
-  if ('error' in ownership) return ownership
+  if ('errorKey' in ownership) return ownership
 
   const { error } = await supabase.from('item').update({ image_url: null }).eq('id', itemId)
-  if (error) return { error: 'שגיאה בהסרת התמונה' }
+  if (error) return err('photoRemoveFailed')
   return { ok: true }
 }
 
 export async function updateItemLabel(hostToken: string, itemId: string, customLabel: string) {
   const supabase = createAdminClient()
   const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)
-  if ('error' in ownership) return ownership
+  if ('errorKey' in ownership) return ownership
 
   const trimmed = customLabel.trim()
   const { error } = await supabase
     .from('item')
     .update({ custom_label: trimmed || null })
     .eq('id', itemId)
-  if (error) return { error: 'שגיאה בשמירת התיאור' }
+  if (error) return err('labelSaveFailed')
   return { ok: true }
 }
