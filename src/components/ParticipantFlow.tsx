@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { THEME_STYLES } from '@/lib/theme'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
@@ -34,22 +35,23 @@ function scoreKey(itemId: string, parameterId: string) {
 
 type TextSize = 'normal' | 'large' | 'xlarge'
 
-const TEXT_SIZE_LABELS: Record<TextSize, string> = {
-  normal: 'רגיל',
-  large: 'גדול',
-  xlarge: 'גדול מאוד',
-}
-
 const TEXT_SIZE_STYLES: Record<TextSize, { heading: string; label: string; button: string }> = {
   normal: { heading: 'text-sm', label: 'text-sm', button: 'h-11 w-11 text-sm' },
   large: { heading: 'text-base', label: 'text-base', button: 'h-12 w-12 text-base' },
   xlarge: { heading: 'text-lg', label: 'text-lg', button: 'h-14 w-14 text-lg' },
 }
 
+const TEXT_SIZE_KEYS: TextSize[] = ['normal', 'large', 'xlarge']
 const TEXT_SIZE_STORAGE_KEY = 'bt_text_size'
 
 export default function ParticipantFlow({ event, itemTypes, items, categories, parameters }: Props) {
   const theme = THEME_STYLES[event.theme]
+  const t = useTranslations('participantFlow')
+  const textSizeLabels: Record<TextSize, string> = {
+    normal: t('textSizeNormal'),
+    large: t('textSizeLarge'),
+    xlarge: t('textSizeXLarge'),
+  }
   const [supabase] = useState(() => createClient())
   const [checking, setChecking] = useState(true)
   const [participant, setParticipant] = useState<ParticipantRow | null>(null)
@@ -182,7 +184,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
   }, [items, parameters, categories, scores, checklistAnswers])
 
   if (checking) {
-    return <p className={`text-center text-sm ${theme.muted}`}>טוען…</p>
+    return <p className={`text-center text-sm ${theme.muted}`}>{t('loading')}</p>
   }
 
   if (!participant) {
@@ -329,35 +331,35 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
     <div className="flex flex-col gap-5">
       {saveError && (
         <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-center text-sm text-red-700">
-          שגיאה בשמירת הציון האחרון, נסה ללחוץ שוב
+          {t('saveError')}
         </div>
       )}
 
       {reminder && (
         <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span>המארגן מבקש שתסיים למלא 🙂</span>
+          <span>{t('reminderBanner')}</span>
           <button
             type="button"
             onClick={() => setReminder(false)}
             className="shrink-0 text-xs font-medium underline"
           >
-            סגור
+            {t('close')}
           </button>
         </div>
       )}
 
       <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm">
         <span>
-          שלום, <strong>{participant.nickname}</strong>
+          {t('greeting')} <strong>{participant.nickname}</strong>
         </span>
         <span className="text-xs text-zinc-500">
-          {doneItemIds.size}/{items.length} פריטים הושלמו
+          {t('itemsCompleted', { done: doneItemIds.size, total: items.length })}
         </span>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl bg-white px-4 py-2">
-        <span className="text-xs text-zinc-500">גודל טקסט:</span>
-        {(Object.keys(TEXT_SIZE_LABELS) as TextSize[]).map((size) => (
+        <span className="text-xs text-zinc-500">{t('textSizeLabel')}</span>
+        {TEXT_SIZE_KEYS.map((size) => (
           <button
             key={size}
             type="button"
@@ -368,18 +370,18 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
                 : 'border-zinc-300 bg-white text-zinc-700'
             }`}
           >
-            {TEXT_SIZE_LABELS[size]}
+            {textSizeLabels[size]}
           </button>
         ))}
       </div>
 
       {itemTypes.length > 1 ? (
         <div className="flex flex-col gap-3">
-          {itemTypes.map((t) => (
-            <div key={t.id} className="flex flex-col gap-1">
-              <span className={`text-xs font-medium ${theme.muted}`}>{t.name}</span>
+          {itemTypes.map((itemType) => (
+            <div key={itemType.id} className="flex flex-col gap-1">
+              <span className={`text-xs font-medium ${theme.muted}`}>{itemType.name}</span>
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {items.filter((i) => i.item_type_id === t.id).map(renderItemTab)}
+                {items.filter((i) => i.item_type_id === itemType.id).map(renderItemTab)}
               </div>
             </div>
           ))}
@@ -391,17 +393,15 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
       {finished ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-zinc-300 bg-white p-6 text-center">
           <span className="text-2xl">🎉</span>
-          <p className="text-base font-semibold text-zinc-800">סיימת לדרג את כל הפריטים!</p>
-          <p className="text-sm text-zinc-500">
-            עדיין אפשר לחזור ולערוך כל פריט מהרשימה למעלה, כל עוד התוצאות שלו לא פורסמו
-          </p>
+          <p className="text-base font-semibold text-zinc-800">{t('finishedTitle')}</p>
+          <p className="text-sm text-zinc-500">{t('finishedHint')}</p>
         </div>
       ) : (
         activeItem && (
           <div className="flex flex-col gap-6">
             {activeItemLocked && (
               <div className="rounded-xl border border-zinc-300 bg-zinc-100 px-4 py-3 text-center text-sm text-zinc-600">
-                🔒 התוצאות לפריט הזה כבר פורסמו, אי אפשר לערוך יותר
+                {t('itemLocked')}
               </div>
             )}
             {categories
@@ -415,7 +415,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
                     <h3 className={`font-semibold ${theme.accent} ${TEXT_SIZE_STYLES[textSize].heading}`}>
                       {category.name}
                       {isLastCategory && (
-                        <span className={`mr-2 text-xs font-normal ${theme.muted}`}>(חובה)</span>
+                        <span className={`mr-2 text-xs font-normal ${theme.muted}`}>{t('mandatoryTag')}</span>
                       )}
                     </h3>
                     <div className="flex flex-col gap-3">
@@ -464,7 +464,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
                             <span className={`font-medium text-zinc-700 ${TEXT_SIZE_STYLES[textSize].label}`}>
                               {param.name}
                               {param.multi_select && (
-                                <span className="mr-2 text-xs font-normal text-zinc-400">(בחירה מרובה)</span>
+                                <span className="mr-2 text-xs font-normal text-zinc-400">{t('multiSelectTag')}</span>
                               )}
                             </span>
                             <div className="flex flex-wrap gap-2">
@@ -499,17 +499,17 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
                     key={warningTrigger}
                     className="animate-shake rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-900"
                   >
-                    ⚠️ יש למלא את קטגוריית &quot;{activeItemLastCategory?.name}&quot; לפני שממשיכים
+                    {t('categoryWarning', { category: activeItemLastCategory?.name ?? '' })}
                   </div>
                 )}
                 <button type="button" onClick={handleFinishItem} className={PRIMARY_BUTTON_CLASS}>
-                  {isLastItem ? 'סיימתי לדרג' : 'סיימתי - לפריט הבא'}
+                  {isLastItem ? t('finishLastItem') : t('finishNextItem')}
                 </button>
                 <Link
                   href={`/e/${event.share_token}/results`}
                   className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-center text-sm font-medium text-zinc-700"
                 >
-                  צפייה בתוצאות
+                  {t('viewResults')}
                 </Link>
               </div>
             )}
@@ -521,7 +521,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
         href={`/e/${event.share_token}/results`}
         className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-center text-sm font-medium text-zinc-700"
       >
-        למסך התוצאות
+        {t('toResultsScreen')}
       </Link>
 
       <OrganizerOrParticipantLink eventId={event.id} mutedClass={theme.muted} waiting />
@@ -540,6 +540,7 @@ function JoinForm({
   theme: (typeof THEME_STYLES)[keyof typeof THEME_STYLES]
   onJoined: (p: ParticipantRow) => void
 }) {
+  const t = useTranslations('participantFlow.join')
   const [nickname, setNickname] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -557,7 +558,7 @@ function JoinForm({
       .single()
     setPending(false)
     if (insertError || !data) {
-      setError('שגיאה בהצטרפות, נסה שוב')
+      setError(t('joinError'))
       return
     }
     onJoined(data)
@@ -566,19 +567,19 @@ function JoinForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <label htmlFor="nickname" className={`text-sm font-medium ${theme.accent}`}>
-        איך קוראים לך?
+        {t('nicknameLabel')}
       </label>
       <input
         id="nickname"
         value={nickname}
         onChange={(e) => setNickname(e.target.value)}
-        placeholder="שם או כינוי"
+        placeholder={t('nicknamePlaceholder')}
         className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
         required
       />
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       <button type="submit" disabled={pending} className={PRIMARY_BUTTON_CLASS}>
-        {pending ? 'מצטרף…' : 'הצטרף להטעימה'}
+        {pending ? t('joining') : t('submit')}
       </button>
       <OrganizerOrParticipantLink eventId={event.id} mutedClass={theme.muted} />
     </form>

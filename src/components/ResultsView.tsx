@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { THEME_STYLES } from '@/lib/theme'
 import OrganizerOrParticipantLink from '@/components/OrganizerOrParticipantLink'
@@ -45,6 +46,7 @@ export default function ResultsView({
   externalCriteria,
   externalValues,
 }: Props) {
+  const t = useTranslations('resultsView')
   const [supabase] = useState(() => createClient())
   const [participants, setParticipants] = useState<ParticipantRow[]>([])
   const [scores, setScores] = useState<ScoreRow[]>([])
@@ -112,9 +114,9 @@ export default function ResultsView({
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
         {event.results_visibility === 'after_all_done' ? (
-          <p className={`text-base font-medium ${theme.accent}`}>מחכים שמשתתפים יסיימו לדרג פריטים</p>
+          <p className={`text-base font-medium ${theme.accent}`}>{t('waitingAfterAllDone')}</p>
         ) : (
-          <p className={`text-base font-medium ${theme.accent}`}>מחכים שהמארגן יפתח את התוצאות</p>
+          <p className={`text-base font-medium ${theme.accent}`}>{t('waitingManual')}</p>
         )}
         <OrganizerOrParticipantLink eventId={event.id} mutedClass={theme.muted} waiting />
       </div>
@@ -142,8 +144,8 @@ export default function ResultsView({
         <div className="flex gap-2 rounded-xl border border-white/20 p-1">
           {(
             [
-              { value: true, label: 'עם קריטריונים חיצוניים' },
-              { value: false, label: 'בלי קריטריונים חיצוניים' },
+              { value: true, label: t('withExternal') },
+              { value: false, label: t('withoutExternal') },
             ] as { value: boolean; label: string }[]
           ).map((opt) => (
             <button
@@ -161,23 +163,23 @@ export default function ResultsView({
       )}
 
       <RankingList
-        title={hasMultipleTypes ? 'דירוג כללי' : undefined}
+        title={hasMultipleTypes ? t('overallRanking') : undefined}
         results={overallRanked}
         itemDetails={itemDetails}
         theme={theme}
       />
 
       {hasMultipleTypes &&
-        itemTypes.map((t) => {
-          const typeItems = openItems.filter((i) => i.item_type_id === t.id)
+        itemTypes.map((itemType) => {
+          const typeItems = openItems.filter((i) => i.item_type_id === itemType.id)
           if (typeItems.length === 0) return null
           const typeRanked = rankResults(
             calculateResults(typeItems, categories, parameters, scores, activeCriteria, activeValues)
           )
           return (
             <RankingList
-              key={t.id}
-              title={`דירוג ${t.name}`}
+              key={itemType.id}
+              title={t('typeRanking', { name: itemType.name })}
               results={typeRanked}
               itemDetails={itemDetails}
               theme={theme}
@@ -187,7 +189,7 @@ export default function ResultsView({
 
       {pendingItems.length > 0 && (
         <div className="flex flex-col gap-2 rounded-xl border border-dashed border-white/30 p-4">
-          <span className={`text-xs font-medium ${theme.accent}`}>טרם פורסמו</span>
+          <span className={`text-xs font-medium ${theme.accent}`}>{t('notYetPublished')}</span>
           <span className={`text-sm ${theme.muted}`}>
             {pendingItems.map((i) => (i.custom_label ? `${i.label} — ${i.custom_label}` : i.label)).join(', ')}
           </span>
@@ -239,6 +241,7 @@ function RankingList({
   itemDetails: Map<string, ItemDetail>
   theme: (typeof THEME_STYLES)[keyof typeof THEME_STYLES]
 }) {
+  const t = useTranslations('resultsView')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   function toggle(id: string) {
@@ -299,7 +302,7 @@ function RankingList({
                     <ItemIdentity item={r.item} />
                   </span>
                   {r.participantCount > 0 && (
-                    <span className="text-xs text-zinc-500">{r.participantCount} דירוגים</span>
+                    <span className="text-xs text-zinc-500">{t('ratingsCount', { count: r.participantCount })}</span>
                   )}
                 </div>
               </div>
@@ -313,7 +316,7 @@ function RankingList({
                     onClick={() => toggle(r.item.id)}
                     className="shrink-0 text-xs font-medium text-zinc-500 underline"
                   >
-                    {isOpen ? 'הסתר פירוט' : 'הצג פירוט'}
+                    {isOpen ? t('hideDetail') : t('showDetail')}
                   </button>
                 )}
               </div>
@@ -335,16 +338,18 @@ function RankingList({
 }
 
 function ItemDetailView({ detail }: { detail: ItemDetail }) {
+  const t = useTranslations('resultsView')
   return (
     <div className="mt-3 flex flex-col gap-3 border-t border-zinc-200 pt-3">
       {detail.categoryAverages.length > 0 && (
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-zinc-500">ציון ממוצע לפי קטגוריה</span>
+          <span className="text-xs font-medium text-zinc-500">{t('categoryAverageHeading')}</span>
           <ul className="flex flex-col gap-0.5">
             {detail.categoryAverages.map((ca) => (
               <li key={ca.category.id} className="flex items-center justify-between text-sm">
                 <span className="text-zinc-700">
-                  {ca.category.name} <span className="text-xs text-zinc-400">(משקל {ca.category.weight})</span>
+                  {ca.category.name}{' '}
+                  <span className="text-xs text-zinc-400">{t('weightSuffix', { weight: ca.category.weight })}</span>
                 </span>
                 <span className="font-medium text-zinc-900">{ca.averageScore.toFixed(2)}</span>
               </li>
@@ -355,15 +360,16 @@ function ItemDetailView({ detail }: { detail: ItemDetail }) {
 
       {detail.externalContributions.length > 0 && (
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-zinc-500">קריטריונים חיצוניים</span>
+          <span className="text-xs font-medium text-zinc-500">{t('externalCriteriaHeading')}</span>
           <ul className="flex flex-col gap-0.5">
             {detail.externalContributions.map((ec) => (
               <li key={ec.criterion.id} className="flex items-center justify-between text-sm">
                 <span className="text-zinc-700">
                   {ec.criterion.name}{' '}
                   <span className="text-xs text-zinc-400">
-                    (משקל {ec.criterion.weight}
-                    {ec.rawValue ? `, ערך: ${ec.rawValue}` : ''})
+                    {ec.rawValue
+                      ? t('criterionWeightWithValue', { weight: ec.criterion.weight, value: ec.rawValue })
+                      : t('weightSuffix', { weight: ec.criterion.weight })}
                   </span>
                 </span>
                 <span className="font-medium text-zinc-900">{ec.score !== null ? ec.score.toFixed(2) : '—'}</span>
@@ -375,14 +381,14 @@ function ItemDetailView({ detail }: { detail: ItemDetail }) {
 
       {detail.participantScores.length > 0 && (
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-zinc-500">ציון לפי משתתף</span>
+          <span className="text-xs font-medium text-zinc-500">{t('participantScoreHeading')}</span>
           <ul className="flex flex-col gap-0.5">
             {detail.participantScores.map((ps) => (
               <li key={ps.participant.id} className="flex items-center justify-between text-sm">
                 <span className="text-zinc-700">
                   {ps.participant.nickname}
                   {detail.closest?.participant.id === ps.participant.id && (
-                    <span className="mr-1 text-amber-500" title="הכי קרוב לממוצע">
+                    <span className="mr-1 text-amber-500" title={t('closestTooltip')}>
                       ⭐
                     </span>
                   )}
@@ -396,7 +402,7 @@ function ItemDetailView({ detail }: { detail: ItemDetail }) {
 
       {detail.closest && (
         <p className="text-xs text-zinc-500">
-          ⭐ הכי קרוב לממוצע:{' '}
+          {t('closestLine')}{' '}
           <span className="font-medium text-zinc-700">{detail.closest.participant.nickname}</span> (
           {detail.closest.score.toFixed(2)})
         </p>
@@ -420,6 +426,7 @@ function DescriptiveSummary({
   participantCount: number
   theme: (typeof THEME_STYLES)[keyof typeof THEME_STYLES]
 }) {
+  const t = useTranslations('resultsView')
   const checklistParams = parameters.filter((p) => p.kind === 'checklist')
   if (checklistParams.length === 0 || participantCount === 0) return null
 
@@ -427,7 +434,7 @@ function DescriptiveSummary({
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className={`text-sm font-semibold ${theme.accent}`}>סיכום תיאורי טעימה</h2>
+      <h2 className={`text-sm font-semibold ${theme.accent}`}>{t('descriptiveSummary')}</h2>
       {items.map((item) => {
         const itemParams = checklistParams.filter(
           (p) => categoryById.get(p.category_id)?.item_type_id === item.item_type_id
@@ -456,7 +463,7 @@ function DescriptiveSummary({
                         <li key={option} className="flex items-center justify-between text-sm">
                           <span className="text-zinc-700">{option}</span>
                           <span className="text-zinc-500">
-                            נבחר ע"י {count} מתוך {participantCount}
+                            {t('selectedBy', { count, total: participantCount })}
                           </span>
                         </li>
                       ))}

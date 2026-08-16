@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { createPublicClient } from '@/lib/supabase/public'
 import ParticipantFlow from '@/components/ParticipantFlow'
 import { THEME_STYLES } from '@/lib/theme'
@@ -5,6 +6,7 @@ import type { EventRow } from '@/lib/types'
 
 export default async function JoinPage(props: PageProps<'/e/[shareToken]'>) {
   const { shareToken } = await props.params
+  const t = await getTranslations('participantFlow')
   const supabase = createPublicClient()
 
   const { data: event } = await supabase
@@ -16,8 +18,8 @@ export default async function JoinPage(props: PageProps<'/e/[shareToken]'>) {
   if (!event) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center">
-        <h1 className="text-lg font-semibold">אירוע לא נמצא</h1>
-        <p className="text-sm text-zinc-500">בדוק שהעתקת את הקישור המלא</p>
+        <h1 className="text-lg font-semibold">{t('eventNotFound')}</h1>
+        <p className="text-sm text-zinc-500">{t('eventNotFoundHint')}</p>
       </main>
     )
   }
@@ -56,7 +58,7 @@ export default async function JoinPage(props: PageProps<'/e/[shareToken]'>) {
             <img src={ev.logo_url} alt="" className="h-16 w-16 rounded-lg object-contain" />
           )}
           <h1 className={`text-xl font-bold ${theme.accent}`}>{ev.title}</h1>
-          <p className={`text-xs ${theme.muted}`}>הטעמה עיוורת</p>
+          <p className={`text-xs ${theme.muted}`}>{t('pageSubtitle')}</p>
         </header>
         <ParticipantFlow
           event={ev}

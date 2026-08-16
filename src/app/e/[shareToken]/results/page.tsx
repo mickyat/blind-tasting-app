@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { createPublicClient } from '@/lib/supabase/public'
 import ResultsView from '@/components/ResultsView'
 import { THEME_STYLES } from '@/lib/theme'
@@ -5,6 +6,7 @@ import type { EventRow } from '@/lib/types'
 
 export default async function ResultsPage(props: PageProps<'/e/[shareToken]/results'>) {
   const { shareToken } = await props.params
+  const t = await getTranslations('resultsView')
   const supabase = createPublicClient()
 
   const { data: event } = await supabase
@@ -16,7 +18,7 @@ export default async function ResultsPage(props: PageProps<'/e/[shareToken]/resu
   if (!event) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center">
-        <h1 className="text-lg font-semibold">אירוע לא נמצא</h1>
+        <h1 className="text-lg font-semibold">{t('eventNotFound')}</h1>
       </main>
     )
   }
@@ -66,7 +68,7 @@ export default async function ResultsPage(props: PageProps<'/e/[shareToken]/resu
             <img src={ev.logo_url} alt="" className="h-16 w-16 rounded-lg object-contain" />
           )}
           <h1 className={`text-xl font-bold ${theme.accent}`}>{ev.title}</h1>
-          <p className={`text-xs ${theme.muted}`}>תוצאות</p>
+          <p className={`text-xs ${theme.muted}`}>{t('pageSubtitle')}</p>
         </header>
         <ResultsView
           event={ev}

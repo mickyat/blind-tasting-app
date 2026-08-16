@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { findHostTokenForEvent } from '@/components/MyEvents'
 
 interface Props {
@@ -20,6 +21,7 @@ interface Props {
 // management page, everyone else -> a "start your own tasting" link plus,
 // optionally, a note to wait for results.
 export default function OrganizerOrParticipantLink({ eventId, mutedClass, waiting = false }: Props) {
+  const t = useTranslations('organizerOrParticipantLink')
   const [hostToken, setHostToken] = useState<string | null>(null)
 
   useEffect(() => {
@@ -29,16 +31,16 @@ export default function OrganizerOrParticipantLink({ eventId, mutedClass, waitin
   if (hostToken) {
     return (
       <Link href={`/host/${hostToken}`} className={`text-center text-xs underline ${mutedClass}`}>
-        את/ה המארגן/ת של האירוע? מעבר לניהול האירוע
+        {t('goToManagement')}
       </Link>
     )
   }
 
   return (
     <div className="flex flex-col items-center gap-1">
-      {waiting && <span className={`text-xs ${mutedClass}`}>המתן לפרסום התוצאות ע&quot;י המארגן</span>}
+      {waiting && <span className={`text-xs ${mutedClass}`}>{t('waitingForResults')}</span>}
       <Link href="/" className={`text-center text-xs underline ${mutedClass}`}>
-        רוצה לארגן טעימה עיוורת משלך? לחץ כאן
+        {t('startYourOwn')}
       </Link>
     </div>
   )
