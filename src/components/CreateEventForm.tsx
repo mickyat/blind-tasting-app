@@ -15,7 +15,14 @@ import Image from 'next/image'
 import { SWATCH_COLORS } from '@/lib/theme'
 import { TEMPLATE_IMAGES } from '@/lib/templateImages'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
-import { EVENT_TEMPLATES, type EventTemplate } from '@/lib/templates'
+import {
+  EVENT_TEMPLATES,
+  templateLabel,
+  categoryName,
+  parameterName,
+  checklistOptionLabels,
+  type EventTemplate,
+} from '@/lib/templates'
 import { saveMyEvent } from '@/components/MyEvents'
 
 interface ParameterDraft {
@@ -105,19 +112,19 @@ function emptyItemType(): ItemTypeDraft {
   return { name: '', template: null, items: [emptyItem(), emptyItem()], categories: [emptyCategory()], externalCriteria: [] }
 }
 
-function templateToItemType(template: EventTemplate): ItemTypeDraft {
+function templateToItemType(template: EventTemplate, t: (key: string) => string): ItemTypeDraft {
   return {
-    name: template.label,
+    name: templateLabel(t, template.id),
     template: template.id,
     items: [emptyItem(), emptyItem()],
     externalCriteria: [],
     categories: template.categories.map((c) => ({
-      name: c.name,
+      name: categoryName(t, template.id, c.id),
       weight: c.weight,
       parameters: c.parameters.map((p) =>
         p.kind === 'scale'
           ? {
-              name: p.name,
+              name: parameterName(t, template.id, c.id, p.id),
               weight: p.weight,
               kind: 'scale' as const,
               scaleMin: p.scaleMin,
@@ -126,12 +133,12 @@ function templateToItemType(template: EventTemplate): ItemTypeDraft {
               multiSelect: false,
             }
           : {
-              name: p.name,
+              name: parameterName(t, template.id, c.id, p.id),
               weight: p.weight,
               kind: 'checklist' as const,
               scaleMin: 1,
               scaleMax: 5,
-              options: [...p.options],
+              options: checklistOptionLabels(t, template.id, c.id, p),
               multiSelect: p.multiSelect,
             }
       ),
@@ -164,6 +171,7 @@ function themeForTemplate(templateId: string): EventTheme {
 export default function CreateEventForm() {
   const router = useRouter()
   const t = useTranslations('createEventForm')
+  const tRoot = useTranslations()
   const itemTypeExamples = t.raw('itemTypes.examples') as string[]
   const visibilityOptions: { value: ResultsVisibility; label: string; hint: string }[] = [
     { value: 'manual', label: t('visibility.manual'), hint: t('visibility.manualHint') },
@@ -182,9 +190,9 @@ export default function CreateEventForm() {
   const [pending, startTransition] = useTransition()
 
   function chooseTemplate(templateId: string) {
-    const template = EVENT_TEMPLATES.find((t) => t.id === templateId)
+    const template = EVENT_TEMPLATES.find((tpl) => tpl.id === templateId)
     if (template) {
-      setItemTypes([templateToItemType(template)])
+      setItemTypes([templateToItemType(template, tRoot)])
       setTheme(themeForTemplate(template.id))
     }
     setStep('form')
@@ -227,10 +235,15 @@ export default function CreateEventForm() {
   }
   function applyTemplateToItemType(ti: number, template: EventTemplate) {
     setItemTypes((prev) =>
-      prev.map((t, idx) => {
-        if (idx !== ti) return t
-        const fromTemplate = templateToItemType(template)
-        return { ...t, name: t.name || fromTemplate.name, template: template.id, categories: fromTemplate.categories }
+      prev.map((draft, idx) => {
+        if (idx !== ti) return draft
+        const fromTemplate = templateToItemType(template, tRoot)
+        return {
+          ...draft,
+          name: draft.name || fromTemplate.name,
+          template: template.id,
+          categories: fromTemplate.categories,
+        }
       })
     )
   }
@@ -509,7 +522,7 @@ export default function CreateEventForm() {
                 />
               </div>
               <div className="relative z-10 flex flex-col gap-0.5 bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3 pt-8">
-                <span className="text-base font-semibold text-white">{tpl.label}</span>
+                <span className="text-base font-semibold text-white">{templateLabel(tRoot, tpl.id)}</span>
                 <span className="text-xs font-normal text-white/75">{t('template.readyBadge')}</span>
               </div>
             </button>
@@ -612,7 +625,7 @@ export default function CreateEventForm() {
                   onClick={() => applyTemplateToItemType(ti, tpl)}
                   className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600"
                 >
-                  {tpl.label}
+                  {templateLabel(tRoot, tpl.id)}
                 </button>
               ))}
             </div>

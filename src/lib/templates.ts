@@ -1,296 +1,349 @@
+// Template content (labels, category/parameter names, checklist option
+// labels) is translated - this file only holds stable IDs and structure.
+// Display text lives in src/messages/{he,en}.json under "templates" (+
+// "aromaOptions" for the shared aroma-descriptor list), resolved via the
+// templateLabel/categoryName/parameterName/optionLabel/aromaOptionLabel
+// helpers below, which any caller with a next-intl `t` can use.
+
 interface ScaleParameter {
   kind: 'scale'
-  name: string
+  id: string
   weight: number
   scaleMin: number
   scaleMax: number
 }
 
-interface ChecklistParameter {
+export interface ChecklistParameter {
   kind: 'checklist'
-  name: string
+  id: string
   weight: number
-  options: string[]
+  optionIds: string[]
   multiSelect: boolean
+  // 'own': option labels live under this parameter's own translation node
+  // (options differ in wording/grammar per parameter, e.g. Hebrew gendered
+  // adjectives - "low" for acidity vs tannin vs alcohol are different
+  // words). 'aroma': option labels come from the shared aromaOptions pool
+  // instead (safe to share since those are plain nouns, no agreement issue).
+  optionsSource: 'own' | 'aroma'
 }
 
 export type TemplateParameter = ScaleParameter | ChecklistParameter
 
 interface TemplateCategory {
-  name: string
+  id: string
   weight: number
   parameters: TemplateParameter[]
 }
 
 export interface EventTemplate {
   id: string
-  label: string
   categories: TemplateCategory[]
 }
 
-function q(name: string, weight = 1): ScaleParameter {
-  return { kind: 'scale', name, weight, scaleMin: 1, scaleMax: 5 }
+function q(id: string, weight = 1): ScaleParameter {
+  return { kind: 'scale', id, weight, scaleMin: 1, scaleMax: 5 }
 }
 
-function single(name: string, options: string[], weight = 1): ChecklistParameter {
-  return { kind: 'checklist', name, weight, options, multiSelect: false }
+function single(id: string, optionIds: string[], weight = 1): ChecklistParameter {
+  return { kind: 'checklist', id, weight, optionIds, multiSelect: false, optionsSource: 'own' }
 }
 
-function multi(name: string, options: string[], weight = 1): ChecklistParameter {
-  return { kind: 'checklist', name, weight, options, multiSelect: true }
+function multi(id: string, optionIds: string[], weight = 1): ChecklistParameter {
+  return { kind: 'checklist', id, weight, optionIds, multiSelect: true, optionsSource: 'aroma' }
 }
 
-const AROMA_OPTIONS = [
-  'פרחוני',
-  'פרי ירוק',
-  'פרי הדר',
-  'פרי גלעין',
-  'פרי טרופי',
-  'פרי אדום',
-  'פרי שחור',
-  'עשבוני',
-  'צמחי-מרפא',
-  'תיבול',
-  'פירות בשלים',
-  'פירות לא בשלים',
-  'פירות מיובשים',
-  'פירות מבושלים',
-  'שמרים/לחם',
-  'חמאה/שמנת',
-  'עץ אלון',
-  'וניל',
-  'תבלינים',
+const AROMA_OPTION_IDS = [
+  'floral',
+  'greenFruit',
+  'citrusFruit',
+  'stoneFruit',
+  'tropicalFruit',
+  'redFruit',
+  'blackFruit',
+  'herbaceous',
+  'herbal',
+  'spice',
+  'ripeFruit',
+  'underripeFruit',
+  'driedFruit',
+  'cookedFruit',
+  'yeastBread',
+  'butterCream',
+  'oak',
+  'vanilla',
+  'bakingSpice',
 ]
 
 export const EVENT_TEMPLATES: EventTemplate[] = [
   {
     id: 'wine',
-    label: 'יין חברתי',
     categories: [
-      { name: 'נראות', weight: 1, parameters: [q('צבע'), q('צלילות')] },
-      { name: 'באף', weight: 2, parameters: [q('פגם'), q('עוצמה'), q('מורכבות')] },
+      { id: 'appearance', weight: 1, parameters: [q('color'), q('clarity')] },
+      { id: 'nose', weight: 2, parameters: [q('flaw'), q('intensity'), q('complexity')] },
       {
-        name: 'בפה',
+        id: 'palate',
         weight: 2,
-        parameters: [q('חמיצות'), q('עפיצות'), q('איזון'), q('סיומת'), q('אורך')],
+        parameters: [q('acidity'), q('astringency'), q('balance'), q('finish'), q('length')],
       },
       {
-        name: 'כללי',
+        id: 'overall',
         weight: 3,
-        parameters: [q('ייחודיות'), q('זניות'), q('אותנטיות'), q('ארצה שוב', 2)],
+        parameters: [q('uniqueness'), q('typicity'), q('authenticity'), q('wantAgain', 2)],
       },
     ],
   },
   {
     id: 'wine_pro',
-    label: 'יין מקצועי - טעימה שיטתית',
     categories: [
       {
-        name: 'אף',
+        id: 'nose',
         weight: 1,
         parameters: [
-          single('עוצמה', ['קלה', 'בינונית', 'בולטת']),
-          single('מצב', ['נקי', 'לא נקי']),
-          multi('מאפייני ארומה', AROMA_OPTIONS),
+          single('intensity', ['light', 'medium', 'pronounced']),
+          single('condition', ['clean', 'unclean']),
+          multi('aromaCharacteristics', AROMA_OPTION_IDS),
         ],
       },
       {
-        name: 'פה',
+        id: 'palate',
         weight: 1,
         parameters: [
-          single('גוף', ['קליל', 'בינוני', 'מלא']),
-          single('חומציות', ['נמוכה', 'בינונית', 'גבוהה']),
-          single('טאנינים', ['נמוכים', 'בינוניים', 'גבוהים']),
-          single('מתיקות', ['יבש', 'כמעט יבש', 'בינוני', 'מתוק']),
-          single('אלכוהול', ['נמוך', 'בינוני', 'גבוה']),
-          single('עוצמת טעם', ['קלה', 'בינונית', 'בולטת']),
-          multi('מאפייני טעם', AROMA_OPTIONS),
-          single('סיומת', ['קצרה', 'בינונית', 'ארוכה']),
+          single('body', ['light', 'medium', 'full']),
+          single('acidity', ['low', 'medium', 'high']),
+          single('tannin', ['low', 'medium', 'high']),
+          single('sweetness', ['dry', 'offDry', 'medium', 'sweet']),
+          single('alcohol', ['low', 'medium', 'high']),
+          single('intensity', ['light', 'medium', 'pronounced']),
+          multi('flavourCharacteristics', AROMA_OPTION_IDS),
+          single('finish', ['short', 'medium', 'long']),
         ],
       },
       {
-        name: 'מראה',
+        id: 'appearance',
         weight: 1,
         parameters: [
-          single('צבע', [
-            'ירוק-לימון',
-            'לימון',
-            'זהב',
-            'ענבר',
-            'חום',
-            'ורוד',
-            'ורוד-כתום',
-            'כתום',
-            'סגול',
-            'אודם',
-            'גרנדה',
-            'חלודה',
+          single('colour', [
+            'greenLemon',
+            'lemon',
+            'gold',
+            'amber',
+            'brown',
+            'pink',
+            'pinkOrange',
+            'orange',
+            'purple',
+            'ruby',
+            'garnet',
+            'tawny',
           ]),
-          single('בהירות', ['צלול', 'עכור']),
-          single('עוצמת צבע', ['בהיר', 'בינוני', 'עמוק']),
+          single('clarity', ['clear', 'hazy']),
+          single('intensity', ['pale', 'medium', 'deep']),
         ],
       },
       {
-        name: 'מסקנות',
+        id: 'conclusions',
         weight: 1,
         parameters: [
-          single('ציון כללי', ['פגום', 'חלש', 'מקובל', 'טוב', 'טוב מאוד', 'יוצא מן הכלל']),
+          single('qualityLevel', ['faulty', 'poor', 'acceptable', 'good', 'veryGood', 'outstanding']),
         ],
       },
     ],
   },
   {
     id: 'meat',
-    label: 'בשר',
     categories: [
       {
-        name: 'מראה חיצוני',
+        id: 'appearance',
         weight: 1,
-        parameters: [q('נראות הנתח'), q('אופן ההגשה'), q('יוצר גירוי')],
+        parameters: [q('cutLook'), q('platingStyle'), q('appetiteAppeal')],
       },
-      { name: 'ארומה וריח', weight: 1, parameters: [q('מעורר תיאבון'), q('ללא ריחות לוואי')] },
+      { id: 'aroma', weight: 1, parameters: [q('appetizing'), q('noOffOdors')] },
       {
-        name: 'מרקם ועשייה',
+        id: 'texture',
         weight: 1,
-        parameters: [q('נימוחות'), q('עסיסיות'), q('רמת עשייה נכונה')],
+        parameters: [q('tenderness'), q('juiciness'), q('donenessAccuracy')],
       },
       {
-        name: 'טעם כללי',
+        id: 'overallTaste',
         weight: 2,
-        parameters: [q('טעם הנתח'), q('רצון לחזור על החוויה'), q('תמורה למחיר לק"ג')],
+        parameters: [q('cutFlavor'), q('wantAgain'), q('pricePerKg')],
       },
     ],
   },
   {
     id: 'beer',
-    label: 'בירה',
     categories: [
       {
-        name: 'מראה וצלילות',
+        id: 'appearanceClarity',
         weight: 1,
-        parameters: [q('צבע וצלילות'), q('ראש הקצף'), q('אופן ההגשה וגירוי')],
+        parameters: [q('colorClarity'), q('foamHead'), q('pourAppeal')],
       },
-      { name: 'ארומה וריח', weight: 1, parameters: [q('עושר הניחוח'), q('ללא ריחות לוואי')] },
+      { id: 'aroma', weight: 1, parameters: [q('aromaRichness'), q('noOffOdors')] },
       {
-        name: 'תחושת פה וגוף',
+        id: 'mouthfeelBody',
         weight: 1,
-        parameters: [q('גוף וסמיכות'), q('גיזוז/קרבונציה'), q('טמפרטורת הגשה')],
+        parameters: [q('bodyThickness'), q('carbonation'), q('servingTemp')],
       },
       {
-        name: 'טעם וחוויה כללית',
+        id: 'tasteExperience',
         weight: 2,
-        parameters: [q('איזון הטעמים'), q('רצון לחזור על החוויה'), q('תמורה למחיר')],
+        parameters: [q('flavorBalance'), q('wantAgain'), q('valueForMoney')],
       },
     ],
   },
   {
     id: 'coffee',
-    label: 'קפה',
     categories: [
-      { name: 'ריח', weight: 1, parameters: [q('עוצמה'), q('ניחוחות')] },
-      { name: 'טעם', weight: 1, parameters: [q('חמיצות'), q('מרירות'), q('גוף')] },
-      { name: 'כללי', weight: 1, parameters: [q('איזון'), q('רצון לשוב אליו')] },
+      { id: 'aroma', weight: 1, parameters: [q('intensity'), q('aromaNotes')] },
+      { id: 'taste', weight: 1, parameters: [q('acidity'), q('bitterness'), q('body')] },
+      { id: 'overall', weight: 1, parameters: [q('balance'), q('wantAgain')] },
     ],
   },
   {
     id: 'whiskey',
-    label: 'ויסקי',
     categories: [
-      { name: 'מראה', weight: 1, parameters: [q('צבע'), q('צלילות')] },
+      { id: 'appearance', weight: 1, parameters: [q('color'), q('clarity')] },
       {
-        name: 'אף',
+        id: 'nose',
         weight: 1,
-        parameters: [q('עוצמה'), q('מורכבות'), q('ניחוחות (עץ/וניל/עשן/פרי)')],
+        parameters: [q('intensity'), q('complexity'), q('aromaNotes')],
       },
       {
-        name: 'פה',
+        id: 'palate',
         weight: 2,
-        parameters: [q('עוצמת טעם'), q('מורכבות'), q('איזון'), q('תחושת חום/גוף')],
+        parameters: [q('flavorIntensity'), q('complexity'), q('balance'), q('warmthBody')],
       },
-      { name: 'כללי', weight: 1, parameters: [q('אורך סיומת'), q('רצון לשוב אליו')] },
+      { id: 'overall', weight: 1, parameters: [q('finishLength'), q('wantAgain')] },
     ],
   },
   {
     id: 'cheese',
-    label: 'גבינות',
     categories: [
-      { name: 'מראה חיצוני', weight: 1, parameters: [q('צבע'), q('מרקם/קרום')] },
-      { name: 'ריח', weight: 1, parameters: [q('עוצמה'), q('ניחוחות')] },
-      { name: 'מרקם', weight: 1, parameters: [q('קשיחות/רכות'), q('קרמיות')] },
+      { id: 'appearance', weight: 1, parameters: [q('color'), q('textureRind')] },
+      { id: 'aroma', weight: 1, parameters: [q('intensity'), q('aromaNotes')] },
+      { id: 'texture', weight: 1, parameters: [q('firmnessSoftness'), q('creaminess')] },
       {
-        name: 'טעם כללי',
+        id: 'overallTaste',
         weight: 2,
         parameters: [
-          q('עוצמת טעם'),
-          q('מליחות/חמיצות'),
-          q('איזון'),
-          q('רצון לחזור'),
-          q('תמורה למחיר לק"ג'),
+          q('flavorIntensity'),
+          q('saltinessAcidity'),
+          q('balance'),
+          q('wantAgain'),
+          q('pricePerKg'),
         ],
       },
     ],
   },
   {
     id: 'sausage',
-    label: 'נקניקיות ונקניקים',
     categories: [
-      { name: 'מראה', weight: 1, parameters: [q('צבע'), q('מרקם חיצוני')] },
-      { name: 'ריח', weight: 1, parameters: [q('עוצמה'), q('תיבול מורגש')] },
-      { name: 'מרקם', weight: 1, parameters: [q('נימוחות/קשיחות'), q('עסיסיות')] },
+      { id: 'appearance', weight: 1, parameters: [q('color'), q('exteriorTexture')] },
+      { id: 'aroma', weight: 1, parameters: [q('intensity'), q('noticeableSpice')] },
+      { id: 'texture', weight: 1, parameters: [q('tendernessFirmness'), q('juiciness')] },
       {
-        name: 'טעם כללי',
+        id: 'overallTaste',
         weight: 2,
         parameters: [
-          q('עוצמת טעם'),
-          q('איזון תבלינים'),
-          q('מליחות'),
-          q('איכות הלחם/לחמנייה (אם מוגש עם)'),
-          q('רצון לחזור'),
-          q('תמורה למחיר לק"ג'),
+          q('flavorIntensity'),
+          q('spiceBalance'),
+          q('saltiness'),
+          q('breadQuality'),
+          q('wantAgain'),
+          q('pricePerKg'),
         ],
       },
     ],
   },
   {
     id: 'burger',
-    label: 'המבורגרים',
     categories: [
-      { name: 'מראה', weight: 1, parameters: [q('נראות ההגשה'), q('צריבה')] },
-      { name: 'ריח', weight: 1, parameters: [q('ניחוח בשרי'), q('עשן/גריל')] },
+      { id: 'appearance', weight: 1, parameters: [q('platingLook'), q('sear')] },
+      { id: 'aroma', weight: 1, parameters: [q('meatyAroma'), q('smokeGrill')] },
       {
-        name: 'מרקם ועסיסיות',
+        id: 'textureJuiciness',
         weight: 1,
-        parameters: [q('נימוחות'), q('עסיסיות'), q('מידת עשייה')],
+        parameters: [q('tenderness'), q('juiciness'), q('doneness')],
       },
       {
-        name: 'טעם כללי',
+        id: 'overallTaste',
         weight: 2,
         parameters: [
-          q('טעם הבשר'),
-          q('איכות הלחמנייה'),
-          q('שילוב עם הרוטב/תוספות'),
-          q('רצון לחזור'),
-          q('תמורה למחיר'),
+          q('meatFlavor'),
+          q('bunQuality'),
+          q('sauceToppingsMatch'),
+          q('wantAgain'),
+          q('valueForMoney'),
         ],
       },
     ],
   },
   {
     id: 'pizza',
-    label: 'פיצה',
     categories: [
-      { name: 'מראה', weight: 1, parameters: [q('צבע קרום'), q('פיזור תוספות')] },
-      { name: 'ריח', weight: 1, parameters: [q('ניחוח בצק'), q('גבינה'), q('תבלינים')] },
+      { id: 'appearance', weight: 1, parameters: [q('crustColor'), q('toppingDistribution')] },
+      { id: 'aroma', weight: 1, parameters: [q('doughAroma'), q('cheese'), q('herbs')] },
       {
-        name: 'בצק ומרקם',
+        id: 'doughTexture',
         weight: 1,
-        parameters: [q('פריכות/רכות'), q('עובי'), q('אחידות אפייה')],
+        parameters: [q('crispinessSoftness'), q('thickness'), q('bakeUniformity')],
       },
       {
-        name: 'טעם כללי',
+        id: 'overallTaste',
         weight: 2,
-        parameters: [q('איזון תוספות ורוטב'), q('עוצמת טעם'), q('רצון לחזור'), q('תמורה למחיר')],
+        parameters: [q('toppingsSauceBalance'), q('flavorIntensity'), q('wantAgain'), q('valueForMoney')],
       },
     ],
   },
 ]
+
+type Translate = (key: string) => string
+
+export function templateLabel(t: Translate, templateId: string): string {
+  return t(`templates.${templateId}.label`)
+}
+
+export function categoryName(t: Translate, templateId: string, categoryId: string): string {
+  return t(`templates.${templateId}.categories.${categoryId}.name`)
+}
+
+export function parameterName(
+  t: Translate,
+  templateId: string,
+  categoryId: string,
+  parameterId: string
+): string {
+  return t(`templates.${templateId}.categories.${categoryId}.parameters.${parameterId}.name`)
+}
+
+export function checklistOptionLabel(
+  t: Translate,
+  templateId: string,
+  categoryId: string,
+  parameterId: string,
+  optionId: string
+): string {
+  return t(
+    `templates.${templateId}.categories.${categoryId}.parameters.${parameterId}.options.${optionId}`
+  )
+}
+
+export function aromaOptionLabel(t: Translate, optionId: string): string {
+  return t(`aromaOptions.${optionId}`)
+}
+
+// Resolves every option label for a checklist parameter at once, picking
+// the right source (the parameter's own translations, or the shared aroma
+// pool) so callers don't need to know about optionsSource themselves.
+export function checklistOptionLabels(
+  t: Translate,
+  templateId: string,
+  categoryId: string,
+  parameter: ChecklistParameter
+): string[] {
+  return parameter.optionIds.map((optionId) =>
+    parameter.optionsSource === 'aroma'
+      ? aromaOptionLabel(t, optionId)
+      : checklistOptionLabel(t, templateId, categoryId, parameter.id, optionId)
+  )
+}

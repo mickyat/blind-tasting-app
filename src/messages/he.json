@@ -100,5 +100,400 @@
     "unexpectedError": "שגיאה לא צפויה, נסה שוב",
     "submitting": "יוצר אירוע…",
     "submit": "צור אירוע"
+  },
+  "templates": {
+    "wine": {
+      "label": "יין חברתי",
+      "categories": {
+        "appearance": {
+          "name": "נראות",
+          "parameters": { "color": { "name": "צבע" }, "clarity": { "name": "צלילות" } }
+        },
+        "nose": {
+          "name": "באף",
+          "parameters": {
+            "flaw": { "name": "פגם" },
+            "intensity": { "name": "עוצמה" },
+            "complexity": { "name": "מורכבות" }
+          }
+        },
+        "palate": {
+          "name": "בפה",
+          "parameters": {
+            "acidity": { "name": "חמיצות" },
+            "astringency": { "name": "עפיצות" },
+            "balance": { "name": "איזון" },
+            "finish": { "name": "סיומת" },
+            "length": { "name": "אורך" }
+          }
+        },
+        "overall": {
+          "name": "כללי",
+          "parameters": {
+            "uniqueness": { "name": "ייחודיות" },
+            "typicity": { "name": "זניות" },
+            "authenticity": { "name": "אותנטיות" },
+            "wantAgain": { "name": "ארצה שוב" }
+          }
+        }
+      }
+    },
+    "wine_pro": {
+      "label": "יין מקצועי - טעימה שיטתית",
+      "categories": {
+        "nose": {
+          "name": "אף",
+          "parameters": {
+            "intensity": {
+              "name": "עוצמה",
+              "options": { "light": "קלה", "medium": "בינונית", "pronounced": "בולטת" }
+            },
+            "condition": {
+              "name": "מצב",
+              "options": { "clean": "נקי", "unclean": "לא נקי" }
+            },
+            "aromaCharacteristics": { "name": "מאפייני ארומה" }
+          }
+        },
+        "palate": {
+          "name": "פה",
+          "parameters": {
+            "body": {
+              "name": "גוף",
+              "options": { "light": "קליל", "medium": "בינוני", "full": "מלא" }
+            },
+            "acidity": {
+              "name": "חומציות",
+              "options": { "low": "נמוכה", "medium": "בינונית", "high": "גבוהה" }
+            },
+            "tannin": {
+              "name": "טאנינים",
+              "options": { "low": "נמוכים", "medium": "בינוניים", "high": "גבוהים" }
+            },
+            "sweetness": {
+              "name": "מתיקות",
+              "options": { "dry": "יבש", "offDry": "כמעט יבש", "medium": "בינוני", "sweet": "מתוק" }
+            },
+            "alcohol": {
+              "name": "אלכוהול",
+              "options": { "low": "נמוך", "medium": "בינוני", "high": "גבוה" }
+            },
+            "intensity": {
+              "name": "עוצמת טעם",
+              "options": { "light": "קלה", "medium": "בינונית", "pronounced": "בולטת" }
+            },
+            "flavourCharacteristics": { "name": "מאפייני טעם" },
+            "finish": {
+              "name": "סיומת",
+              "options": { "short": "קצרה", "medium": "בינונית", "long": "ארוכה" }
+            }
+          }
+        },
+        "appearance": {
+          "name": "מראה",
+          "parameters": {
+            "colour": {
+              "name": "צבע",
+              "options": {
+                "greenLemon": "ירוק-לימון",
+                "lemon": "לימון",
+                "gold": "זהב",
+                "amber": "ענבר",
+                "brown": "חום",
+                "pink": "ורוד",
+                "pinkOrange": "ורוד-כתום",
+                "orange": "כתום",
+                "purple": "סגול",
+                "ruby": "אודם",
+                "garnet": "גרנדה",
+                "tawny": "חלודה"
+              }
+            },
+            "clarity": {
+              "name": "בהירות",
+              "options": { "clear": "צלול", "hazy": "עכור" }
+            },
+            "intensity": {
+              "name": "עוצמת צבע",
+              "options": { "pale": "בהיר", "medium": "בינוני", "deep": "עמוק" }
+            }
+          }
+        },
+        "conclusions": {
+          "name": "מסקנות",
+          "parameters": {
+            "qualityLevel": {
+              "name": "ציון כללי",
+              "options": {
+                "faulty": "פגום",
+                "poor": "חלש",
+                "acceptable": "מקובל",
+                "good": "טוב",
+                "veryGood": "טוב מאוד",
+                "outstanding": "יוצא מן הכלל"
+              }
+            }
+          }
+        }
+      }
+    },
+    "meat": {
+      "label": "בשר",
+      "categories": {
+        "appearance": {
+          "name": "מראה חיצוני",
+          "parameters": {
+            "cutLook": { "name": "נראות הנתח" },
+            "platingStyle": { "name": "אופן ההגשה" },
+            "appetiteAppeal": { "name": "יוצר גירוי" }
+          }
+        },
+        "aroma": {
+          "name": "ארומה וריח",
+          "parameters": { "appetizing": { "name": "מעורר תיאבון" }, "noOffOdors": { "name": "ללא ריחות לוואי" } }
+        },
+        "texture": {
+          "name": "מרקם ועשייה",
+          "parameters": {
+            "tenderness": { "name": "נימוחות" },
+            "juiciness": { "name": "עסיסיות" },
+            "donenessAccuracy": { "name": "רמת עשייה נכונה" }
+          }
+        },
+        "overallTaste": {
+          "name": "טעם כללי",
+          "parameters": {
+            "cutFlavor": { "name": "טעם הנתח" },
+            "wantAgain": { "name": "רצון לחזור על החוויה" },
+            "pricePerKg": { "name": "תמורה למחיר לק\"ג" }
+          }
+        }
+      }
+    },
+    "beer": {
+      "label": "בירה",
+      "categories": {
+        "appearanceClarity": {
+          "name": "מראה וצלילות",
+          "parameters": {
+            "colorClarity": { "name": "צבע וצלילות" },
+            "foamHead": { "name": "ראש הקצף" },
+            "pourAppeal": { "name": "אופן ההגשה וגירוי" }
+          }
+        },
+        "aroma": {
+          "name": "ארומה וריח",
+          "parameters": { "aromaRichness": { "name": "עושר הניחוח" }, "noOffOdors": { "name": "ללא ריחות לוואי" } }
+        },
+        "mouthfeelBody": {
+          "name": "תחושת פה וגוף",
+          "parameters": {
+            "bodyThickness": { "name": "גוף וסמיכות" },
+            "carbonation": { "name": "גיזוז/קרבונציה" },
+            "servingTemp": { "name": "טמפרטורת הגשה" }
+          }
+        },
+        "tasteExperience": {
+          "name": "טעם וחוויה כללית",
+          "parameters": {
+            "flavorBalance": { "name": "איזון הטעמים" },
+            "wantAgain": { "name": "רצון לחזור על החוויה" },
+            "valueForMoney": { "name": "תמורה למחיר" }
+          }
+        }
+      }
+    },
+    "coffee": {
+      "label": "קפה",
+      "categories": {
+        "aroma": {
+          "name": "ריח",
+          "parameters": { "intensity": { "name": "עוצמה" }, "aromaNotes": { "name": "ניחוחות" } }
+        },
+        "taste": {
+          "name": "טעם",
+          "parameters": {
+            "acidity": { "name": "חמיצות" },
+            "bitterness": { "name": "מרירות" },
+            "body": { "name": "גוף" }
+          }
+        },
+        "overall": {
+          "name": "כללי",
+          "parameters": { "balance": { "name": "איזון" }, "wantAgain": { "name": "רצון לשוב אליו" } }
+        }
+      }
+    },
+    "whiskey": {
+      "label": "ויסקי",
+      "categories": {
+        "appearance": {
+          "name": "מראה",
+          "parameters": { "color": { "name": "צבע" }, "clarity": { "name": "צלילות" } }
+        },
+        "nose": {
+          "name": "אף",
+          "parameters": {
+            "intensity": { "name": "עוצמה" },
+            "complexity": { "name": "מורכבות" },
+            "aromaNotes": { "name": "ניחוחות (עץ/וניל/עשן/פרי)" }
+          }
+        },
+        "palate": {
+          "name": "פה",
+          "parameters": {
+            "flavorIntensity": { "name": "עוצמת טעם" },
+            "complexity": { "name": "מורכבות" },
+            "balance": { "name": "איזון" },
+            "warmthBody": { "name": "תחושת חום/גוף" }
+          }
+        },
+        "overall": {
+          "name": "כללי",
+          "parameters": { "finishLength": { "name": "אורך סיומת" }, "wantAgain": { "name": "רצון לשוב אליו" } }
+        }
+      }
+    },
+    "cheese": {
+      "label": "גבינות",
+      "categories": {
+        "appearance": {
+          "name": "מראה חיצוני",
+          "parameters": { "color": { "name": "צבע" }, "textureRind": { "name": "מרקם/קרום" } }
+        },
+        "aroma": {
+          "name": "ריח",
+          "parameters": { "intensity": { "name": "עוצמה" }, "aromaNotes": { "name": "ניחוחות" } }
+        },
+        "texture": {
+          "name": "מרקם",
+          "parameters": { "firmnessSoftness": { "name": "קשיחות/רכות" }, "creaminess": { "name": "קרמיות" } }
+        },
+        "overallTaste": {
+          "name": "טעם כללי",
+          "parameters": {
+            "flavorIntensity": { "name": "עוצמת טעם" },
+            "saltinessAcidity": { "name": "מליחות/חמיצות" },
+            "balance": { "name": "איזון" },
+            "wantAgain": { "name": "רצון לחזור" },
+            "pricePerKg": { "name": "תמורה למחיר לק\"ג" }
+          }
+        }
+      }
+    },
+    "sausage": {
+      "label": "נקניקיות ונקניקים",
+      "categories": {
+        "appearance": {
+          "name": "מראה",
+          "parameters": { "color": { "name": "צבע" }, "exteriorTexture": { "name": "מרקם חיצוני" } }
+        },
+        "aroma": {
+          "name": "ריח",
+          "parameters": { "intensity": { "name": "עוצמה" }, "noticeableSpice": { "name": "תיבול מורגש" } }
+        },
+        "texture": {
+          "name": "מרקם",
+          "parameters": { "tendernessFirmness": { "name": "נימוחות/קשיחות" }, "juiciness": { "name": "עסיסיות" } }
+        },
+        "overallTaste": {
+          "name": "טעם כללי",
+          "parameters": {
+            "flavorIntensity": { "name": "עוצמת טעם" },
+            "spiceBalance": { "name": "איזון תבלינים" },
+            "saltiness": { "name": "מליחות" },
+            "breadQuality": { "name": "איכות הלחם/לחמנייה (אם מוגש עם)" },
+            "wantAgain": { "name": "רצון לחזור" },
+            "pricePerKg": { "name": "תמורה למחיר לק\"ג" }
+          }
+        }
+      }
+    },
+    "burger": {
+      "label": "המבורגרים",
+      "categories": {
+        "appearance": {
+          "name": "מראה",
+          "parameters": { "platingLook": { "name": "נראות ההגשה" }, "sear": { "name": "צריבה" } }
+        },
+        "aroma": {
+          "name": "ריח",
+          "parameters": { "meatyAroma": { "name": "ניחוח בשרי" }, "smokeGrill": { "name": "עשן/גריל" } }
+        },
+        "textureJuiciness": {
+          "name": "מרקם ועסיסיות",
+          "parameters": {
+            "tenderness": { "name": "נימוחות" },
+            "juiciness": { "name": "עסיסיות" },
+            "doneness": { "name": "מידת עשייה" }
+          }
+        },
+        "overallTaste": {
+          "name": "טעם כללי",
+          "parameters": {
+            "meatFlavor": { "name": "טעם הבשר" },
+            "bunQuality": { "name": "איכות הלחמנייה" },
+            "sauceToppingsMatch": { "name": "שילוב עם הרוטב/תוספות" },
+            "wantAgain": { "name": "רצון לחזור" },
+            "valueForMoney": { "name": "תמורה למחיר" }
+          }
+        }
+      }
+    },
+    "pizza": {
+      "label": "פיצה",
+      "categories": {
+        "appearance": {
+          "name": "מראה",
+          "parameters": { "crustColor": { "name": "צבע קרום" }, "toppingDistribution": { "name": "פיזור תוספות" } }
+        },
+        "aroma": {
+          "name": "ריח",
+          "parameters": {
+            "doughAroma": { "name": "ניחוח בצק" },
+            "cheese": { "name": "גבינה" },
+            "herbs": { "name": "תבלינים" }
+          }
+        },
+        "doughTexture": {
+          "name": "בצק ומרקם",
+          "parameters": {
+            "crispinessSoftness": { "name": "פריכות/רכות" },
+            "thickness": { "name": "עובי" },
+            "bakeUniformity": { "name": "אחידות אפייה" }
+          }
+        },
+        "overallTaste": {
+          "name": "טעם כללי",
+          "parameters": {
+            "toppingsSauceBalance": { "name": "איזון תוספות ורוטב" },
+            "flavorIntensity": { "name": "עוצמת טעם" },
+            "wantAgain": { "name": "רצון לחזור" },
+            "valueForMoney": { "name": "תמורה למחיר" }
+          }
+        }
+      }
+    }
+  },
+  "aromaOptions": {
+    "floral": "פרחוני",
+    "greenFruit": "פרי ירוק",
+    "citrusFruit": "פרי הדר",
+    "stoneFruit": "פרי גלעין",
+    "tropicalFruit": "פרי טרופי",
+    "redFruit": "פרי אדום",
+    "blackFruit": "פרי שחור",
+    "herbaceous": "עשבוני",
+    "herbal": "צמחי-מרפא",
+    "spice": "תיבול",
+    "ripeFruit": "פירות בשלים",
+    "underripeFruit": "פירות לא בשלים",
+    "driedFruit": "פירות מיובשים",
+    "cookedFruit": "פירות מבושלים",
+    "yeastBread": "שמרים/לחם",
+    "butterCream": "חמאה/שמנת",
+    "oak": "עץ אלון",
+    "vanilla": "וניל",
+    "bakingSpice": "תבלינים"
   }
 }

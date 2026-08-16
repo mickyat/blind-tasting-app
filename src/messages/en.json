@@ -100,5 +100,400 @@
     "unexpectedError": "Unexpected error, please try again",
     "submitting": "Creating event…",
     "submit": "Create event"
+  },
+  "templates": {
+    "wine": {
+      "label": "Social Wine",
+      "categories": {
+        "appearance": {
+          "name": "Appearance",
+          "parameters": { "color": { "name": "Color" }, "clarity": { "name": "Clarity" } }
+        },
+        "nose": {
+          "name": "Nose",
+          "parameters": {
+            "flaw": { "name": "Flaw" },
+            "intensity": { "name": "Intensity" },
+            "complexity": { "name": "Complexity" }
+          }
+        },
+        "palate": {
+          "name": "Palate",
+          "parameters": {
+            "acidity": { "name": "Acidity" },
+            "astringency": { "name": "Astringency" },
+            "balance": { "name": "Balance" },
+            "finish": { "name": "Finish" },
+            "length": { "name": "Length" }
+          }
+        },
+        "overall": {
+          "name": "Overall",
+          "parameters": {
+            "uniqueness": { "name": "Uniqueness" },
+            "typicity": { "name": "Typicity" },
+            "authenticity": { "name": "Authenticity" },
+            "wantAgain": { "name": "Would drink again" }
+          }
+        }
+      }
+    },
+    "wine_pro": {
+      "label": "Professional Wine - Systematic Tasting",
+      "categories": {
+        "nose": {
+          "name": "Nose",
+          "parameters": {
+            "intensity": {
+              "name": "Intensity",
+              "options": { "light": "Light", "medium": "Medium", "pronounced": "Pronounced" }
+            },
+            "condition": {
+              "name": "Condition",
+              "options": { "clean": "Clean", "unclean": "Unclean" }
+            },
+            "aromaCharacteristics": { "name": "Aroma characteristics" }
+          }
+        },
+        "palate": {
+          "name": "Palate",
+          "parameters": {
+            "body": {
+              "name": "Body",
+              "options": { "light": "Light", "medium": "Medium", "full": "Full" }
+            },
+            "acidity": {
+              "name": "Acidity",
+              "options": { "low": "Low", "medium": "Medium", "high": "High" }
+            },
+            "tannin": {
+              "name": "Tannin",
+              "options": { "low": "Low", "medium": "Medium", "high": "High" }
+            },
+            "sweetness": {
+              "name": "Sweetness",
+              "options": { "dry": "Dry", "offDry": "Off-dry", "medium": "Medium", "sweet": "Sweet" }
+            },
+            "alcohol": {
+              "name": "Alcohol",
+              "options": { "low": "Low", "medium": "Medium", "high": "High" }
+            },
+            "intensity": {
+              "name": "Intensity",
+              "options": { "light": "Light", "medium": "Medium", "pronounced": "Pronounced" }
+            },
+            "flavourCharacteristics": { "name": "Flavour characteristics" },
+            "finish": {
+              "name": "Finish",
+              "options": { "short": "Short", "medium": "Medium", "long": "Long" }
+            }
+          }
+        },
+        "appearance": {
+          "name": "Appearance",
+          "parameters": {
+            "colour": {
+              "name": "Colour",
+              "options": {
+                "greenLemon": "Green-lemon",
+                "lemon": "Lemon",
+                "gold": "Gold",
+                "amber": "Amber",
+                "brown": "Brown",
+                "pink": "Pink",
+                "pinkOrange": "Pink-orange",
+                "orange": "Orange",
+                "purple": "Purple",
+                "ruby": "Ruby",
+                "garnet": "Garnet",
+                "tawny": "Tawny"
+              }
+            },
+            "clarity": {
+              "name": "Clarity",
+              "options": { "clear": "Clear", "hazy": "Hazy" }
+            },
+            "intensity": {
+              "name": "Intensity",
+              "options": { "pale": "Pale", "medium": "Medium", "deep": "Deep" }
+            }
+          }
+        },
+        "conclusions": {
+          "name": "Conclusions",
+          "parameters": {
+            "qualityLevel": {
+              "name": "Quality level",
+              "options": {
+                "faulty": "Faulty",
+                "poor": "Poor",
+                "acceptable": "Acceptable",
+                "good": "Good",
+                "veryGood": "Very good",
+                "outstanding": "Outstanding"
+              }
+            }
+          }
+        }
+      }
+    },
+    "meat": {
+      "label": "Meat",
+      "categories": {
+        "appearance": {
+          "name": "Appearance",
+          "parameters": {
+            "cutLook": { "name": "Cut appearance" },
+            "platingStyle": { "name": "Presentation" },
+            "appetiteAppeal": { "name": "Visual appeal" }
+          }
+        },
+        "aroma": {
+          "name": "Aroma",
+          "parameters": { "appetizing": { "name": "Appetizing aroma" }, "noOffOdors": { "name": "Free of off-odors" } }
+        },
+        "texture": {
+          "name": "Texture & doneness",
+          "parameters": {
+            "tenderness": { "name": "Tenderness" },
+            "juiciness": { "name": "Juiciness" },
+            "donenessAccuracy": { "name": "Correct doneness" }
+          }
+        },
+        "overallTaste": {
+          "name": "Overall taste",
+          "parameters": {
+            "cutFlavor": { "name": "Flavor" },
+            "wantAgain": { "name": "Would repeat the experience" },
+            "pricePerKg": { "name": "Value per kg" }
+          }
+        }
+      }
+    },
+    "beer": {
+      "label": "Beer",
+      "categories": {
+        "appearanceClarity": {
+          "name": "Appearance & clarity",
+          "parameters": {
+            "colorClarity": { "name": "Color & clarity" },
+            "foamHead": { "name": "Foam head" },
+            "pourAppeal": { "name": "Pour & visual appeal" }
+          }
+        },
+        "aroma": {
+          "name": "Aroma",
+          "parameters": { "aromaRichness": { "name": "Aroma richness" }, "noOffOdors": { "name": "Free of off-odors" } }
+        },
+        "mouthfeelBody": {
+          "name": "Mouthfeel & body",
+          "parameters": {
+            "bodyThickness": { "name": "Body & thickness" },
+            "carbonation": { "name": "Carbonation" },
+            "servingTemp": { "name": "Serving temperature" }
+          }
+        },
+        "tasteExperience": {
+          "name": "Taste & overall experience",
+          "parameters": {
+            "flavorBalance": { "name": "Flavor balance" },
+            "wantAgain": { "name": "Would repeat the experience" },
+            "valueForMoney": { "name": "Value for money" }
+          }
+        }
+      }
+    },
+    "coffee": {
+      "label": "Coffee",
+      "categories": {
+        "aroma": {
+          "name": "Aroma",
+          "parameters": { "intensity": { "name": "Intensity" }, "aromaNotes": { "name": "Aroma notes" } }
+        },
+        "taste": {
+          "name": "Taste",
+          "parameters": {
+            "acidity": { "name": "Acidity" },
+            "bitterness": { "name": "Bitterness" },
+            "body": { "name": "Body" }
+          }
+        },
+        "overall": {
+          "name": "Overall",
+          "parameters": { "balance": { "name": "Balance" }, "wantAgain": { "name": "Would drink again" } }
+        }
+      }
+    },
+    "whiskey": {
+      "label": "Whiskey",
+      "categories": {
+        "appearance": {
+          "name": "Appearance",
+          "parameters": { "color": { "name": "Color" }, "clarity": { "name": "Clarity" } }
+        },
+        "nose": {
+          "name": "Nose",
+          "parameters": {
+            "intensity": { "name": "Intensity" },
+            "complexity": { "name": "Complexity" },
+            "aromaNotes": { "name": "Aroma notes (oak/vanilla/smoke/fruit)" }
+          }
+        },
+        "palate": {
+          "name": "Palate",
+          "parameters": {
+            "flavorIntensity": { "name": "Flavor intensity" },
+            "complexity": { "name": "Complexity" },
+            "balance": { "name": "Balance" },
+            "warmthBody": { "name": "Warmth & body" }
+          }
+        },
+        "overall": {
+          "name": "Overall",
+          "parameters": { "finishLength": { "name": "Finish length" }, "wantAgain": { "name": "Would drink again" } }
+        }
+      }
+    },
+    "cheese": {
+      "label": "Cheese",
+      "categories": {
+        "appearance": {
+          "name": "Appearance",
+          "parameters": { "color": { "name": "Color" }, "textureRind": { "name": "Texture/rind" } }
+        },
+        "aroma": {
+          "name": "Aroma",
+          "parameters": { "intensity": { "name": "Intensity" }, "aromaNotes": { "name": "Aroma notes" } }
+        },
+        "texture": {
+          "name": "Texture",
+          "parameters": { "firmnessSoftness": { "name": "Firmness/softness" }, "creaminess": { "name": "Creaminess" } }
+        },
+        "overallTaste": {
+          "name": "Overall taste",
+          "parameters": {
+            "flavorIntensity": { "name": "Flavor intensity" },
+            "saltinessAcidity": { "name": "Saltiness/acidity" },
+            "balance": { "name": "Balance" },
+            "wantAgain": { "name": "Would choose again" },
+            "pricePerKg": { "name": "Value per kg" }
+          }
+        }
+      }
+    },
+    "sausage": {
+      "label": "Sausages",
+      "categories": {
+        "appearance": {
+          "name": "Appearance",
+          "parameters": { "color": { "name": "Color" }, "exteriorTexture": { "name": "Exterior texture" } }
+        },
+        "aroma": {
+          "name": "Aroma",
+          "parameters": { "intensity": { "name": "Intensity" }, "noticeableSpice": { "name": "Noticeable seasoning" } }
+        },
+        "texture": {
+          "name": "Texture",
+          "parameters": { "tendernessFirmness": { "name": "Tenderness/firmness" }, "juiciness": { "name": "Juiciness" } }
+        },
+        "overallTaste": {
+          "name": "Overall taste",
+          "parameters": {
+            "flavorIntensity": { "name": "Flavor intensity" },
+            "spiceBalance": { "name": "Spice balance" },
+            "saltiness": { "name": "Saltiness" },
+            "breadQuality": { "name": "Bread/bun quality (if served with)" },
+            "wantAgain": { "name": "Would choose again" },
+            "pricePerKg": { "name": "Value per kg" }
+          }
+        }
+      }
+    },
+    "burger": {
+      "label": "Burgers",
+      "categories": {
+        "appearance": {
+          "name": "Appearance",
+          "parameters": { "platingLook": { "name": "Presentation" }, "sear": { "name": "Sear" } }
+        },
+        "aroma": {
+          "name": "Aroma",
+          "parameters": { "meatyAroma": { "name": "Meaty aroma" }, "smokeGrill": { "name": "Smoke/grill" } }
+        },
+        "textureJuiciness": {
+          "name": "Texture & juiciness",
+          "parameters": {
+            "tenderness": { "name": "Tenderness" },
+            "juiciness": { "name": "Juiciness" },
+            "doneness": { "name": "Doneness" }
+          }
+        },
+        "overallTaste": {
+          "name": "Overall taste",
+          "parameters": {
+            "meatFlavor": { "name": "Meat flavor" },
+            "bunQuality": { "name": "Bun quality" },
+            "sauceToppingsMatch": { "name": "Sauce & toppings pairing" },
+            "wantAgain": { "name": "Would choose again" },
+            "valueForMoney": { "name": "Value for money" }
+          }
+        }
+      }
+    },
+    "pizza": {
+      "label": "Pizza",
+      "categories": {
+        "appearance": {
+          "name": "Appearance",
+          "parameters": { "crustColor": { "name": "Crust color" }, "toppingDistribution": { "name": "Topping distribution" } }
+        },
+        "aroma": {
+          "name": "Aroma",
+          "parameters": {
+            "doughAroma": { "name": "Dough aroma" },
+            "cheese": { "name": "Cheese" },
+            "herbs": { "name": "Herbs & spices" }
+          }
+        },
+        "doughTexture": {
+          "name": "Dough & texture",
+          "parameters": {
+            "crispinessSoftness": { "name": "Crispiness/softness" },
+            "thickness": { "name": "Thickness" },
+            "bakeUniformity": { "name": "Even baking" }
+          }
+        },
+        "overallTaste": {
+          "name": "Overall taste",
+          "parameters": {
+            "toppingsSauceBalance": { "name": "Toppings & sauce balance" },
+            "flavorIntensity": { "name": "Flavor intensity" },
+            "wantAgain": { "name": "Would choose again" },
+            "valueForMoney": { "name": "Value for money" }
+          }
+        }
+      }
+    }
+  },
+  "aromaOptions": {
+    "floral": "Floral",
+    "greenFruit": "Green fruit",
+    "citrusFruit": "Citrus fruit",
+    "stoneFruit": "Stone fruit",
+    "tropicalFruit": "Tropical fruit",
+    "redFruit": "Red fruit",
+    "blackFruit": "Black fruit",
+    "herbaceous": "Herbaceous",
+    "herbal": "Herbal",
+    "spice": "Spice",
+    "ripeFruit": "Ripe fruit",
+    "underripeFruit": "Underripe fruit",
+    "driedFruit": "Dried fruit",
+    "cookedFruit": "Cooked fruit",
+    "yeastBread": "Yeast/bread",
+    "butterCream": "Butter/cream",
+    "oak": "Oak",
+    "vanilla": "Vanilla",
+    "bakingSpice": "Baking spice"
   }
 }
