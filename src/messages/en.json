@@ -182,7 +182,7 @@
               "name": "Intensity",
               "options": { "light": "Light", "medium": "Medium", "pronounced": "Pronounced" }
             },
-            "flavourCharacteristics": { "name": "Flavour characteristics" },
+            "flavourCharacteristics": { "name": "Flavor characteristics" },
             "finish": {
               "name": "Finish",
               "options": { "short": "Short", "medium": "Medium", "long": "Long" }
@@ -193,7 +193,7 @@
           "name": "Appearance",
           "parameters": {
             "colour": {
-              "name": "Colour",
+              "name": "Color",
               "options": {
                 "greenLemon": "Green-lemon",
                 "lemon": "Lemon",

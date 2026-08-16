@@ -240,7 +240,7 @@ export default function CreateEventForm() {
         const fromTemplate = templateToItemType(template, tRoot)
         return {
           ...draft,
-          name: draft.name || fromTemplate.name,
+          name: fromTemplate.name,
           template: template.id,
           categories: fromTemplate.categories,
         }
