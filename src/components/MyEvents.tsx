@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 
 interface SavedEvent {
   title: string
@@ -38,6 +39,8 @@ export function findHostTokenForEvent(eventId: string): string | null {
 export default function MyEvents() {
   const [open, setOpen] = useState(false)
   const [events, setEvents] = useState<SavedEvent[]>([])
+  const t = useTranslations('myEvents')
+  const locale = useLocale()
 
   useEffect(() => {
     setEvents(getMyEvents())
@@ -52,7 +55,7 @@ export default function MyEvents() {
         onClick={() => setOpen((o) => !o)}
         className="self-center text-sm font-medium text-zinc-600 underline"
       >
-        {open ? 'הסתר' : 'האירועים שלי'} ({events.length})
+        {open ? t('toggleHide') : t('toggleShow')} ({events.length})
       </button>
       {open && (
         <ul className="flex flex-col gap-2">
@@ -64,7 +67,7 @@ export default function MyEvents() {
               >
                 <span className="font-medium">{e.title}</span>
                 <span className="text-xs text-zinc-400">
-                  {new Date(e.createdAt).toLocaleDateString('he-IL')}
+                  {new Date(e.createdAt).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-US')}
                 </span>
               </a>
             </li>

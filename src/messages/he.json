@@ -10,5 +10,95 @@
   "localeSwitcher": {
     "he": "עברית",
     "en": "English"
+  },
+  "myEvents": {
+    "toggleShow": "האירועים שלי",
+    "toggleHide": "הסתר"
+  },
+  "createEventForm": {
+    "template": {
+      "prompt": "איך תרצה להתחיל?",
+      "readyBadge": "תבנית מוכנה",
+      "startFromScratch": "+ התחל מאפס",
+      "backToTemplates": "← חזרה לבחירת תבנית"
+    },
+    "title": {
+      "label": "כותרת האירוע",
+      "placeholder": "למשל: ערב הטעימות"
+    },
+    "logo": {
+      "heading": "לוגו (אופציונלי)",
+      "alt": "לוגו",
+      "remove": "הסר לוגו",
+      "uploading": "מעלה…"
+    },
+    "itemTypes": {
+      "heading": "סוגי פריט",
+      "namePlaceholder": "סוג פריט {n} (למשל: {example})",
+      "removeItemType": "הסר סוג פריט",
+      "fillFromTemplate": "מלא מתבנית:",
+      "itemsHeading": "פריטים ({name})",
+      "thisType": "סוג זה",
+      "itemFallback": "פריט {n}",
+      "removeItem": "הסר פריט",
+      "addItem": "+ הוסף פריט",
+      "addItemType": "+ הוסף סוג פריט (למשל: גם בשר לצד היין)",
+      "examples": ["יצירת אמנות", "קטע מוזיקלי", "מאמר", "סרטון קצר"]
+    },
+    "externalCriteria": {
+      "detailsSummary": "⚙️ הגדרות נוספות (קריטריונים חיצוניים — למשל מחיר, יבוא/מקומי)",
+      "namePlaceholder": "שם הקריטריון (למשל: מחיר)",
+      "remove": "הסר קריטריון",
+      "weightLabel": "משקל (כמו משקל קטגוריה)",
+      "calcManual": "ציון ידני",
+      "calcThreshold": "טבלת ספים",
+      "calcOptions": "רשימת אפשרויות",
+      "manualHint": "תזין ציון (1-5) ישירות לכל פריט למטה, בסעיף \"ערכים לכל פריט\"",
+      "thresholdHint": "כללי סף ← ציון. הכלל הראשון שמתאים לערך זוכה, לפי הסדר למטה",
+      "direction": "כיוון",
+      "directionBelow": "עד",
+      "directionAbove": "מעל",
+      "value": "ערך",
+      "score": "ציון",
+      "removeThreshold": "הסר סף",
+      "addThreshold": "+ הוסף סף",
+      "optionLabelPlaceholder": "תווית (למשל: יבוא)",
+      "removeOption": "הסר אפשרות",
+      "addOption": "+ הוסף אפשרות",
+      "add": "+ הוסף קריטריון חיצוני",
+      "valuesPerItemHeading": "ערכים לכל פריט ({name})",
+      "criterionFallback": "קריטריון {n}"
+    },
+    "categories": {
+      "heading": "קטגוריות ותת-שאלות",
+      "namePlaceholder": "קטגוריה {n} (למשל: אף)",
+      "remove": "הסר קטגוריה",
+      "weightLabel": "משקל קטגוריה",
+      "paramPlaceholder": "תת-שאלה {n}",
+      "removeParam": "הסר תת-שאלה",
+      "kindScale": "סולם מספרי",
+      "kindChecklist": "רשימת אפשרויות",
+      "weight": "משקל",
+      "scaleFrom": "סולם מ-",
+      "scaleTo": "סולם עד",
+      "allowMulti": "אפשר בחירה מרובה",
+      "optionPlaceholder": "אפשרות {n}",
+      "removeOption": "הסר אפשרות",
+      "addOption": "+ הוסף אפשרות",
+      "addParam": "+ הוסף תת-שאלה",
+      "add": "+ הוסף קטגוריה"
+    },
+    "visibility": {
+      "heading": "מתי להציג תוצאות",
+      "manual": "ידני",
+      "manualHint": "התוצאות ייחשפו רק כשתלחץ על \"הצג תוצאות\"",
+      "afterAllDone": "אחרי שכולם סיימו",
+      "afterAllDoneHint": "התוצאות ייחשפו אוטומטית כשכל המשתתפים דירגו הכול",
+      "live": "חי",
+      "liveHint": "התוצאות מוצגות ומתעדכנות מהניקוד הראשון"
+    },
+    "unexpectedError": "שגיאה לא צפויה, נסה שוב",
+    "submitting": "יוצר אירוע…",
+    "submit": "צור אירוע"
   }
 }

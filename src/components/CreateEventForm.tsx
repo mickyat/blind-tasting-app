@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { createEvent, uploadEventLogo } from '@/app/actions'
 import type {
   EventTheme,
@@ -159,18 +160,16 @@ function themeForTemplate(templateId: string): EventTheme {
   return 'default'
 }
 
-// Rotating examples for the item-type name placeholder, so it doesn't imply
-// this app is only for food/drink tastings.
-const ITEM_TYPE_EXAMPLES = ['יצירת אמנות', 'קטע מוזיקלי', 'מאמר', 'סרטון קצר']
-
-const VISIBILITY_OPTIONS: { value: ResultsVisibility; label: string; hint: string }[] = [
-  { value: 'manual', label: 'ידני', hint: 'התוצאות ייחשפו רק כשתלחץ על "הצג תוצאות"' },
-  { value: 'after_all_done', label: 'אחרי שכולם סיימו', hint: 'התוצאות ייחשפו אוטומטית כשכל המשתתפים דירגו הכול' },
-  { value: 'live', label: 'חי', hint: 'התוצאות מוצגות ומתעדכנות מהניקוד הראשון' },
-]
 
 export default function CreateEventForm() {
   const router = useRouter()
+  const t = useTranslations('createEventForm')
+  const itemTypeExamples = t.raw('itemTypes.examples') as string[]
+  const visibilityOptions: { value: ResultsVisibility; label: string; hint: string }[] = [
+    { value: 'manual', label: t('visibility.manual'), hint: t('visibility.manualHint') },
+    { value: 'after_all_done', label: t('visibility.afterAllDone'), hint: t('visibility.afterAllDoneHint') },
+    { value: 'live', label: t('visibility.live'), hint: t('visibility.liveHint') },
+  ]
   const [step, setStep] = useState<'template' | 'form'>('template')
   const [theme, setTheme] = useState<EventTheme>('default')
   const [title, setTitle] = useState('')
@@ -211,7 +210,7 @@ export default function CreateEventForm() {
       return
     }
     if (!('url' in result) || !result.url) {
-      setLogoError('שגיאה לא צפויה, נסה שוב')
+      setLogoError(t('unexpectedError'))
       return
     }
     setLogoUrl(result.url)
@@ -474,7 +473,7 @@ export default function CreateEventForm() {
         return
       }
       if (!('hostToken' in result) || !result.hostToken) {
-        setError('שגיאה לא צפויה, נסה שוב')
+        setError(t('unexpectedError'))
         return
       }
       saveMyEvent({
@@ -490,18 +489,18 @@ export default function CreateEventForm() {
   if (step === 'template') {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-center text-sm text-zinc-500">איך תרצה להתחיל?</p>
+        <p className="text-center text-sm text-zinc-500">{t('template.prompt')}</p>
         <div className="grid grid-cols-2 gap-3">
-          {EVENT_TEMPLATES.map((t) => (
+          {EVENT_TEMPLATES.map((tpl) => (
             <button
-              key={t.id}
+              key={tpl.id}
               type="button"
-              onClick={() => chooseTemplate(t.id)}
-              className={`relative flex h-28 flex-col items-stretch justify-end overflow-hidden rounded-xl border border-zinc-300 text-center font-medium ${SWATCH_COLORS[themeForTemplate(t.id)]}`}
+              onClick={() => chooseTemplate(tpl.id)}
+              className={`relative flex h-28 flex-col items-stretch justify-end overflow-hidden rounded-xl border border-zinc-300 text-center font-medium ${SWATCH_COLORS[themeForTemplate(tpl.id)]}`}
             >
               <div className="absolute inset-0">
                 <Image
-                  src={TEMPLATE_IMAGES[t.id] ?? TEMPLATE_IMAGES[themeForTemplate(t.id)]}
+                  src={TEMPLATE_IMAGES[tpl.id] ?? TEMPLATE_IMAGES[themeForTemplate(tpl.id)]}
                   alt=""
                   fill
                   priority
@@ -510,8 +509,8 @@ export default function CreateEventForm() {
                 />
               </div>
               <div className="relative z-10 flex flex-col gap-0.5 bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3 pt-8">
-                <span className="text-base font-semibold text-white">{t.label}</span>
-                <span className="text-xs font-normal text-white/75">תבנית מוכנה</span>
+                <span className="text-base font-semibold text-white">{tpl.label}</span>
+                <span className="text-xs font-normal text-white/75">{t('template.readyBadge')}</span>
               </div>
             </button>
           ))}
@@ -521,7 +520,7 @@ export default function CreateEventForm() {
           onClick={startFromScratch}
           className="rounded-xl border-2 border-zinc-900 bg-white px-4 py-3 text-sm font-bold text-zinc-900"
         >
-          + התחל מאפס
+          {t('template.startFromScratch')}
         </button>
       </div>
     )
@@ -534,35 +533,35 @@ export default function CreateEventForm() {
         onClick={() => setStep('template')}
         className="self-start rounded-lg border-2 border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700"
       >
-        ← חזרה לבחירת תבנית
+        {t('template.backToTemplates')}
       </button>
 
       <section className="flex flex-col gap-2">
         <label htmlFor="title" className="text-sm font-medium text-zinc-700">
-          כותרת האירוע
+          {t('title.label')}
         </label>
         <input
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="למשל: ערב הטעימות"
+          placeholder={t('title.placeholder')}
           className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
           required
         />
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-zinc-700">לוגו (אופציונלי)</h2>
+        <h2 className="text-sm font-medium text-zinc-700">{t('logo.heading')}</h2>
         {logoUrl ? (
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logoUrl} alt="לוגו" className="h-14 w-14 rounded-lg border border-zinc-300 object-contain bg-white" />
+            <img src={logoUrl} alt={t('logo.alt')} className="h-14 w-14 rounded-lg border border-zinc-300 object-contain bg-white" />
             <button
               type="button"
               onClick={() => setLogoUrl(null)}
               className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-600"
             >
-              הסר לוגו
+              {t('logo.remove')}
             </button>
           </div>
         ) : (
@@ -574,19 +573,22 @@ export default function CreateEventForm() {
             className="text-sm text-zinc-600"
           />
         )}
-        {logoUploading && <p className="text-xs text-zinc-500">מעלה…</p>}
+        {logoUploading && <p className="text-xs text-zinc-500">{t('logo.uploading')}</p>}
         {logoError && <p className="text-xs text-red-600">{logoError}</p>}
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium text-zinc-700">סוגי פריט</h2>
+        <h2 className="text-sm font-medium text-zinc-700">{t('itemTypes.heading')}</h2>
         {itemTypes.map((itemType, ti) => (
           <div key={ti} className="flex flex-col gap-4 rounded-2xl border-2 border-zinc-400 bg-white p-4">
             <div className="flex items-center gap-2">
               <input
                 value={itemType.name}
                 onChange={(e) => updateItemType(ti, { name: e.target.value })}
-                placeholder={`סוג פריט ${ti + 1} (למשל: ${ITEM_TYPE_EXAMPLES[ti % ITEM_TYPE_EXAMPLES.length]})`}
+                placeholder={t('itemTypes.namePlaceholder', {
+                  n: ti + 1,
+                  example: itemTypeExamples[ti % itemTypeExamples.length],
+                })}
                 className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base font-semibold focus:border-zinc-500 focus:outline-none"
                 required
               />
@@ -594,7 +596,7 @@ export default function CreateEventForm() {
                 type="button"
                 onClick={() => removeItemType(ti)}
                 disabled={itemTypes.length <= 1}
-                aria-label="הסר סוג פריט"
+                aria-label={t('itemTypes.removeItemType')}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
               >
                 ✕
@@ -602,27 +604,29 @@ export default function CreateEventForm() {
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              <span className="self-center text-xs text-zinc-500">מלא מתבנית:</span>
-              {EVENT_TEMPLATES.map((t) => (
+              <span className="self-center text-xs text-zinc-500">{t('itemTypes.fillFromTemplate')}</span>
+              {EVENT_TEMPLATES.map((tpl) => (
                 <button
-                  key={t.id}
+                  key={tpl.id}
                   type="button"
-                  onClick={() => applyTemplateToItemType(ti, t)}
+                  onClick={() => applyTemplateToItemType(ti, tpl)}
                   className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600"
                 >
-                  {t.label}
+                  {tpl.label}
                 </button>
               ))}
             </div>
 
             <div className="flex flex-col gap-2">
-              <h3 className="text-xs font-medium text-zinc-500">פריטים ({itemType.name || 'סוג זה'})</h3>
+              <h3 className="text-xs font-medium text-zinc-500">
+                {t('itemTypes.itemsHeading', { name: itemType.name || t('itemTypes.thisType') })}
+              </h3>
               {itemType.items.map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <input
                     value={item.label}
                     onChange={(e) => updateItemTypeItem(ti, i, { label: e.target.value })}
-                    placeholder={`פריט ${i + 1}`}
+                    placeholder={t('itemTypes.itemFallback', { n: i + 1 })}
                     className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
                     required
                   />
@@ -630,7 +634,7 @@ export default function CreateEventForm() {
                     type="button"
                     onClick={() => removeItemTypeItem(ti, i)}
                     disabled={itemType.items.length <= 2}
-                    aria-label="הסר פריט"
+                    aria-label={t('itemTypes.removeItem')}
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
                   >
                     ✕
@@ -642,13 +646,13 @@ export default function CreateEventForm() {
                 onClick={() => addItemTypeItem(ti)}
                 className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1.5 text-xs font-medium text-zinc-600"
               >
-                + הוסף פריט
+                {t('itemTypes.addItem')}
               </button>
             </div>
 
             <details className="flex flex-col gap-3 rounded-xl border-2 border-zinc-300 bg-zinc-50 p-3 open:pb-3">
               <summary className="cursor-pointer text-sm font-semibold text-zinc-800">
-                ⚙️ הגדרות נוספות (קריטריונים חיצוניים — למשל מחיר, יבוא/מקומי)
+                {t('externalCriteria.detailsSummary')}
               </summary>
               <div className="flex flex-col gap-3 pt-2">
                 {itemType.externalCriteria.map((crit, ei) => (
@@ -657,21 +661,21 @@ export default function CreateEventForm() {
                       <input
                         value={crit.name}
                         onChange={(e) => updateExternalCriterion(ti, ei, { name: e.target.value })}
-                        placeholder="שם הקריטריון (למשל: מחיר)"
+                        placeholder={t('externalCriteria.namePlaceholder')}
                         className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => removeExternalCriterion(ti, ei)}
-                        aria-label="הסר קריטריון"
+                        aria-label={t('externalCriteria.remove')}
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500"
                       >
                         ✕
                       </button>
                     </div>
                     <label className="flex items-center gap-2 text-xs text-zinc-500">
-                      משקל (כמו משקל קטגוריה)
+                      {t('externalCriteria.weightLabel')}
                       <input
                         type="number"
                         min={0}
@@ -686,9 +690,9 @@ export default function CreateEventForm() {
                     <div className="flex gap-2">
                       {(
                         [
-                          { value: 'manual', label: 'ציון ידני' },
-                          { value: 'threshold', label: 'טבלת ספים' },
-                          { value: 'options', label: 'רשימת אפשרויות' },
+                          { value: 'manual', label: t('externalCriteria.calcManual') },
+                          { value: 'threshold', label: t('externalCriteria.calcThreshold') },
+                          { value: 'options', label: t('externalCriteria.calcOptions') },
                         ] as { value: ExternalCriterionCalcType; label: string }[]
                       ).map((opt) => (
                         <button
@@ -707,25 +711,21 @@ export default function CreateEventForm() {
                     </div>
 
                     {crit.calcType === 'manual' && (
-                      <p className="text-xs text-zinc-400">
-                        תזין ציון (1-5) ישירות לכל פריט למטה, בסעיף &quot;ערכים לכל פריט&quot;
-                      </p>
+                      <p className="text-xs text-zinc-400">{t('externalCriteria.manualHint')}</p>
                     )}
 
                     {crit.calcType === 'threshold' && (
                       <div className="flex flex-col gap-2">
-                        <span className="text-xs text-zinc-500">
-                          כללי סף ← ציון. הכלל הראשון שמתאים לערך זוכה, לפי הסדר למטה
-                        </span>
+                        <span className="text-xs text-zinc-500">{t('externalCriteria.thresholdHint')}</span>
                         {crit.thresholds.map((th, thi) => (
                           <div key={thi} className="flex items-end gap-2">
                             <div className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
-                              כיוון
+                              {t('externalCriteria.direction')}
                               <div className="flex gap-1">
                                 {(
                                   [
-                                    { value: 'below' as ThresholdDirection, label: 'עד' },
-                                    { value: 'above' as ThresholdDirection, label: 'מעל' },
+                                    { value: 'below' as ThresholdDirection, label: t('externalCriteria.directionBelow') },
+                                    { value: 'above' as ThresholdDirection, label: t('externalCriteria.directionAbove') },
                                   ]
                                 ).map((opt) => (
                                   <button
@@ -744,7 +744,7 @@ export default function CreateEventForm() {
                               </div>
                             </div>
                             <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
-                              ערך
+                              {t('externalCriteria.value')}
                               <input
                                 type="number"
                                 step="any"
@@ -755,7 +755,7 @@ export default function CreateEventForm() {
                               />
                             </label>
                             <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
-                              ציון
+                              {t('externalCriteria.score')}
                               <input
                                 type="number"
                                 step="any"
@@ -769,7 +769,7 @@ export default function CreateEventForm() {
                               type="button"
                               onClick={() => removeThreshold(ti, ei, thi)}
                               disabled={crit.thresholds.length <= 1}
-                              aria-label="הסר סף"
+                              aria-label={t('externalCriteria.removeThreshold')}
                               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
                             >
                               ✕
@@ -781,7 +781,7 @@ export default function CreateEventForm() {
                           onClick={() => addThreshold(ti, ei)}
                           className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1 text-xs font-medium text-zinc-600"
                         >
-                          + הוסף סף
+                          {t('externalCriteria.addThreshold')}
                         </button>
                       </div>
                     )}
@@ -793,7 +793,7 @@ export default function CreateEventForm() {
                             <input
                               value={opt.label}
                               onChange={(e) => updateCriterionOption(ti, ei, oi, { label: e.target.value })}
-                              placeholder="תווית (למשל: יבוא)"
+                              placeholder={t('externalCriteria.optionLabelPlaceholder')}
                               className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
                               required
                             />
@@ -809,7 +809,7 @@ export default function CreateEventForm() {
                               type="button"
                               onClick={() => removeCriterionOption(ti, ei, oi)}
                               disabled={crit.options.length <= 1}
-                              aria-label="הסר אפשרות"
+                              aria-label={t('externalCriteria.removeOption')}
                               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
                             >
                               ✕
@@ -821,7 +821,7 @@ export default function CreateEventForm() {
                           onClick={() => addCriterionOption(ti, ei)}
                           className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1 text-xs font-medium text-zinc-600"
                         >
-                          + הוסף אפשרות
+                          {t('externalCriteria.addOption')}
                         </button>
                       </div>
                     )}
@@ -832,21 +832,23 @@ export default function CreateEventForm() {
                   onClick={() => addExternalCriterion(ti)}
                   className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1.5 text-xs font-medium text-zinc-600"
                 >
-                  + הוסף קריטריון חיצוני
+                  {t('externalCriteria.add')}
                 </button>
 
                 {itemType.externalCriteria.length > 0 && (
                   <div className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-3">
                     <span className="text-xs font-medium text-zinc-500">
-                      ערכים לכל פריט ({itemType.name || 'סוג זה'})
+                      {t('externalCriteria.valuesPerItemHeading', { name: itemType.name || t('itemTypes.thisType') })}
                     </span>
                     {itemType.items.map((item, i) => (
                       <div key={i} className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2">
-                        <span className="text-sm font-medium text-zinc-700">{item.label || `פריט ${i + 1}`}</span>
+                        <span className="text-sm font-medium text-zinc-700">
+                          {item.label || t('itemTypes.itemFallback', { n: i + 1 })}
+                        </span>
                         <div className="flex flex-wrap gap-2">
                           {itemType.externalCriteria.map((crit, ei) => (
                             <label key={ei} className="flex min-w-[110px] flex-1 flex-col gap-1 text-xs text-zinc-500">
-                              {crit.name || `קריטריון ${ei + 1}`}
+                              {crit.name || t('externalCriteria.criterionFallback', { n: ei + 1 })}
                               {crit.calcType === 'options' ? (
                                 <select
                                   value={item.externalValues[ei] ?? ''}
@@ -881,7 +883,7 @@ export default function CreateEventForm() {
             </details>
 
             <div className="flex flex-col gap-3">
-              <h3 className="text-xs font-medium text-zinc-500">קטגוריות ותת-שאלות</h3>
+              <h3 className="text-xs font-medium text-zinc-500">{t('categories.heading')}</h3>
               {itemType.categories.map((category, ci) => (
                 <div key={ci} className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-zinc-50 p-3">
                   <div className="flex flex-col gap-2">
@@ -889,7 +891,7 @@ export default function CreateEventForm() {
                       <input
                         value={category.name}
                         onChange={(e) => updateCategory(ti, ci, { name: e.target.value })}
-                        placeholder={`קטגוריה ${ci + 1} (למשל: אף)`}
+                        placeholder={t('categories.namePlaceholder', { n: ci + 1 })}
                         className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base font-medium focus:border-zinc-500 focus:outline-none"
                         required
                       />
@@ -897,14 +899,14 @@ export default function CreateEventForm() {
                         type="button"
                         onClick={() => removeCategory(ti, ci)}
                         disabled={itemType.categories.length <= 1}
-                        aria-label="הסר קטגוריה"
+                        aria-label={t('categories.remove')}
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
                       >
                         ✕
                       </button>
                     </div>
                     <label className="flex items-center gap-2 text-xs text-zinc-500">
-                      משקל קטגוריה
+                      {t('categories.weightLabel')}
                       <input
                         type="number"
                         min={0}
@@ -924,7 +926,7 @@ export default function CreateEventForm() {
                           <input
                             value={p.name}
                             onChange={(e) => updateParameter(ti, ci, pi, { name: e.target.value })}
-                            placeholder={`תת-שאלה ${pi + 1}`}
+                            placeholder={t('categories.paramPlaceholder', { n: pi + 1 })}
                             className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
                             required
                           />
@@ -932,7 +934,7 @@ export default function CreateEventForm() {
                             type="button"
                             onClick={() => removeParameter(ti, ci, pi)}
                             disabled={category.parameters.length <= 1}
-                            aria-label="הסר תת-שאלה"
+                            aria-label={t('categories.removeParam')}
                             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
                           >
                             ✕
@@ -947,7 +949,7 @@ export default function CreateEventForm() {
                               p.kind === 'scale' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 text-zinc-600'
                             }`}
                           >
-                            סולם מספרי
+                            {t('categories.kindScale')}
                           </button>
                           <button
                             type="button"
@@ -956,14 +958,14 @@ export default function CreateEventForm() {
                               p.kind === 'checklist' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 text-zinc-600'
                             }`}
                           >
-                            רשימת אפשרויות
+                            {t('categories.kindChecklist')}
                           </button>
                         </div>
 
                         {p.kind === 'scale' ? (
                           <>
                             <label className="flex flex-col gap-1 text-xs text-zinc-500">
-                              משקל
+                              {t('categories.weight')}
                               <input
                                 type="number"
                                 min={0}
@@ -976,7 +978,7 @@ export default function CreateEventForm() {
                             </label>
                             <div className="grid grid-cols-2 gap-2">
                               <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500">
-                                סולם מ-
+                                {t('categories.scaleFrom')}
                                 <input
                                   type="number"
                                   value={p.scaleMin}
@@ -986,7 +988,7 @@ export default function CreateEventForm() {
                                 />
                               </label>
                               <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500">
-                                סולם עד
+                                {t('categories.scaleTo')}
                                 <input
                                   type="number"
                                   value={p.scaleMax}
@@ -1005,7 +1007,7 @@ export default function CreateEventForm() {
                                 checked={p.multiSelect}
                                 onChange={(e) => updateParameter(ti, ci, pi, { multiSelect: e.target.checked })}
                               />
-                              אפשר בחירה מרובה
+                              {t('categories.allowMulti')}
                             </label>
                             <div className="flex flex-col gap-1.5">
                               {p.options.map((opt, oi) => (
@@ -1013,7 +1015,7 @@ export default function CreateEventForm() {
                                   <input
                                     value={opt}
                                     onChange={(e) => updateOption(ti, ci, pi, oi, e.target.value)}
-                                    placeholder={`אפשרות ${oi + 1}`}
+                                    placeholder={t('categories.optionPlaceholder', { n: oi + 1 })}
                                     className="min-w-0 flex-1 rounded-lg border border-zinc-300 px-2 py-1.5 text-sm focus:border-zinc-500 focus:outline-none"
                                     required
                                   />
@@ -1021,7 +1023,7 @@ export default function CreateEventForm() {
                                     type="button"
                                     onClick={() => removeOption(ti, ci, pi, oi)}
                                     disabled={p.options.length <= 1}
-                                    aria-label="הסר אפשרות"
+                                    aria-label={t('categories.removeOption')}
                                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
                                   >
                                     ✕
@@ -1033,7 +1035,7 @@ export default function CreateEventForm() {
                                 onClick={() => addOption(ti, ci, pi)}
                                 className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1 text-xs font-medium text-zinc-600"
                               >
-                                + הוסף אפשרות
+                                {t('categories.addOption')}
                               </button>
                             </div>
                           </div>
@@ -1045,7 +1047,7 @@ export default function CreateEventForm() {
                       onClick={() => addParameter(ti, ci)}
                       className="self-start rounded-lg border border-dashed border-zinc-400 px-3 py-1.5 text-xs font-medium text-zinc-600"
                     >
-                      + הוסף תת-שאלה
+                      {t('categories.addParam')}
                     </button>
                   </div>
                 </div>
@@ -1055,7 +1057,7 @@ export default function CreateEventForm() {
                 onClick={() => addCategory(ti)}
                 className="self-start rounded-xl border border-dashed border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-600"
               >
-                + הוסף קטגוריה
+                {t('categories.add')}
               </button>
             </div>
           </div>
@@ -1065,14 +1067,14 @@ export default function CreateEventForm() {
           onClick={addItemType}
           className="self-start rounded-xl border border-dashed border-zinc-500 px-4 py-2 text-sm font-medium text-zinc-700"
         >
-          + הוסף סוג פריט (למשל: גם בשר לצד היין)
+          {t('itemTypes.addItemType')}
         </button>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-zinc-700">מתי להציג תוצאות</h2>
+        <h2 className="text-sm font-medium text-zinc-700">{t('visibility.heading')}</h2>
         <div className="flex flex-col gap-2">
-          {VISIBILITY_OPTIONS.map((opt) => (
+          {visibilityOptions.map((opt) => (
             <label
               key={opt.value}
               className={`flex cursor-pointer flex-col gap-0.5 rounded-xl border p-3 ${
@@ -1097,7 +1099,7 @@ export default function CreateEventForm() {
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
       <button type="submit" disabled={pending} className={PRIMARY_BUTTON_CLASS}>
-        {pending ? 'יוצר אירוע…' : 'צור אירוע'}
+        {pending ? t('submitting') : t('submit')}
       </button>
     </form>
   )

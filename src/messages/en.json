@@ -10,5 +10,95 @@
   "localeSwitcher": {
     "he": "עברית",
     "en": "English"
+  },
+  "myEvents": {
+    "toggleShow": "My events",
+    "toggleHide": "Hide"
+  },
+  "createEventForm": {
+    "template": {
+      "prompt": "How would you like to start?",
+      "readyBadge": "Ready-made template",
+      "startFromScratch": "+ Start from scratch",
+      "backToTemplates": "← Back to templates"
+    },
+    "title": {
+      "label": "Event title",
+      "placeholder": "e.g. Tasting night"
+    },
+    "logo": {
+      "heading": "Logo (optional)",
+      "alt": "Logo",
+      "remove": "Remove logo",
+      "uploading": "Uploading…"
+    },
+    "itemTypes": {
+      "heading": "Item types",
+      "namePlaceholder": "Item type {n} (e.g. {example})",
+      "removeItemType": "Remove item type",
+      "fillFromTemplate": "Fill from template:",
+      "itemsHeading": "Items ({name})",
+      "thisType": "this type",
+      "itemFallback": "Item {n}",
+      "removeItem": "Remove item",
+      "addItem": "+ Add item",
+      "addItemType": "+ Add item type (e.g. meat alongside the wine)",
+      "examples": ["a piece of art", "a song", "an article", "a short video"]
+    },
+    "externalCriteria": {
+      "detailsSummary": "⚙️ More settings (external criteria — e.g. price, imported/local)",
+      "namePlaceholder": "Criterion name (e.g. price)",
+      "remove": "Remove criterion",
+      "weightLabel": "Weight (like category weight)",
+      "calcManual": "Manual score",
+      "calcThreshold": "Threshold table",
+      "calcOptions": "Option list",
+      "manualHint": "Enter a score (1-5) directly for each item below, under \"Values per item\"",
+      "thresholdHint": "Threshold rules → score. The first matching rule wins, in the order listed below",
+      "direction": "Direction",
+      "directionBelow": "Up to",
+      "directionAbove": "Above",
+      "value": "Value",
+      "score": "Score",
+      "removeThreshold": "Remove threshold",
+      "addThreshold": "+ Add threshold",
+      "optionLabelPlaceholder": "Label (e.g. imported)",
+      "removeOption": "Remove option",
+      "addOption": "+ Add option",
+      "add": "+ Add external criterion",
+      "valuesPerItemHeading": "Values per item ({name})",
+      "criterionFallback": "Criterion {n}"
+    },
+    "categories": {
+      "heading": "Categories & sub-questions",
+      "namePlaceholder": "Category {n} (e.g. Nose)",
+      "remove": "Remove category",
+      "weightLabel": "Category weight",
+      "paramPlaceholder": "Sub-question {n}",
+      "removeParam": "Remove sub-question",
+      "kindScale": "Numeric scale",
+      "kindChecklist": "Option list",
+      "weight": "Weight",
+      "scaleFrom": "Scale from",
+      "scaleTo": "Scale to",
+      "allowMulti": "Allow multiple selection",
+      "optionPlaceholder": "Option {n}",
+      "removeOption": "Remove option",
+      "addOption": "+ Add option",
+      "addParam": "+ Add sub-question",
+      "add": "+ Add category"
+    },
+    "visibility": {
+      "heading": "When to show results",
+      "manual": "Manual",
+      "manualHint": "Results are revealed only when you click \"Show results\"",
+      "afterAllDone": "After everyone's done",
+      "afterAllDoneHint": "Results are revealed automatically once every participant has rated everything",
+      "live": "Live",
+      "liveHint": "Results are shown and update live from the very first score"
+    },
+    "unexpectedError": "Unexpected error, please try again",
+    "submitting": "Creating event…",
+    "submit": "Create event"
   }
 }
