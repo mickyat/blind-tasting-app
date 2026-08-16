@@ -53,7 +53,11 @@
     "photoSaveFailed": "שגיאה בשמירת התמונה",
     "photoRemoveFailed": "שגיאה בהסרת התמונה",
     "labelSaveFailed": "שגיאה בשמירת התיאור",
-    "visibilitySaveFailed": "שגיאה בשמירת הגדרת הנראות"
+    "visibilitySaveFailed": "שגיאה בשמירת הגדרת הנראות",
+    "participantNotInEvent": "המשתתף לא שייך לאירוע הזה",
+    "invalidJudgeWeight": "משקל לא תקין - יש להזין מספר בין 0 ל-100",
+    "judgeWeightExceeds100": "סך כל המשקלים שהוקצו לשופטים לא יכול לעבור 100%",
+    "judgeWeightSaveFailed": "שגיאה בשמירת משקל השופט"
   },
   "metadata": {
     "title": "פאנל הטעם — TastePanel",
@@ -629,6 +633,23 @@
       "manualHeading": "בחירת פריטים להצגה בתוצאות",
       "noScoresYet": "האפשרות תיפתח לאחר שיהיה ניקוד ראשוני",
       "showInResults": "הצג בתוצאות"
+    },
+    "judges": {
+      "heading": "שופטים ומשקלים",
+      "hint": "אפשר לתת למשתתפים מסוימים (שופטים) משקל קבוע בציון הסופי - השאר מתחלקים שווה בשווה במה שנשאר",
+      "totalAssigned": "סך המשקל שהוקצה לשופטים: {total}%",
+      "weightBadge": "שופט - {weight}%",
+      "markAsJudge": "סמן כשופט",
+      "editWeight": "ערוך משקל",
+      "clear": "בטל סימון",
+      "save": "שמור",
+      "cancel": "ביטול",
+      "groupHint": "או: סמנו כמה משתתפים למעלה והקצו להם יחד אחוז אחד, שיתחלק ביניהם שווה בשווה",
+      "groupWeightPlaceholder": "אחוז לקבוצה",
+      "applyToSelected": "החל על הנבחרים ({count})",
+      "applying": "מחיל…",
+      "selectAtLeastOneHint": "יש לסמן לפחות משתתף אחד",
+      "invalidWeightHint": "יש להזין מספר בין 0 ל-100"
     }
   },
   "organizerOrParticipantLink": {
@@ -673,6 +694,7 @@
     "pageSubtitle": "תוצאות",
     "prizeAnnouncement": "🎁 הפרס: {prize}",
     "createNextEvent": "צור את האירוע הבא שלך",
+    "weightedJudgesActive": "⚖ הופעל שקלול שופטים באירוע זה",
     "waitingAfterAllDone": "מחכים שמשתתפים יסיימו לדרג פריטים",
     "waitingManual": "מחכים שהמארגן יפתח את התוצאות",
     "withExternal": "עם קריטריונים חיצוניים",

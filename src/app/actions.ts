@@ -535,3 +535,73 @@ export async function updateItemVisibility(hostToken: string, itemId: string, in
   if (error) return err('visibilitySaveFailed')
   return { ok: true }
 }
+
+// Shared by setParticipantJudgeWeight (one judge, its own weight) and
+// setGroupJudgeWeight (several judges, one shared weight already divided
+// evenly by the caller) - both just resolve to "these participants get
+// these weights", so the ownership check and the sum-can't-exceed-100
+// validation only need writing once. Re-checks the *global* sum across the
+// whole event (not just this item/request) so two organizer actions taken
+// moments apart can't jointly push the total past 100%.
+async function applyJudgeWeights(
+  supabase: ReturnType<typeof createAdminClient>,
+  hostToken: string,
+  updates: { participantId: string; weight: number | null }[]
+) {
+  const { data: admin } = await supabase
+    .from('event_admin')
+    .select('event_id')
+    .eq('host_token', hostToken)
+    .maybeSingle()
+  if (!admin) return err('invalidHostLink')
+
+  const { data: participants, error: fetchError } = await supabase
+    .from('participant')
+    .select('id, judge_weight')
+    .eq('event_id', admin.event_id)
+  if (fetchError || !participants) return err('judgeWeightSaveFailed')
+
+  const participantIds = new Set(participants.map((p) => p.id))
+  for (const u of updates) {
+    if (!participantIds.has(u.participantId)) return err('participantNotInEvent')
+    if (u.weight !== null && !(u.weight > 0 && u.weight <= 100)) return err('invalidJudgeWeight')
+  }
+
+  const updateMap = new Map(updates.map((u) => [u.participantId, u.weight]))
+  let total = 0
+  for (const p of participants) {
+    const w = updateMap.has(p.id) ? (updateMap.get(p.id) as number | null) : p.judge_weight
+    if (w !== null && w !== undefined) total += w
+  }
+  if (total > 100 + 1e-6) return err('judgeWeightExceeds100')
+
+  const results = await Promise.all(
+    updates.map((u) => supabase.from('participant').update({ judge_weight: u.weight }).eq('id', u.participantId))
+  )
+  if (results.some((r) => r.error)) return err('judgeWeightSaveFailed')
+  return { ok: true }
+}
+
+// Marks (or unmarks, with weight = null) a single participant as a judge
+// with their own specific percentage weight.
+export async function setParticipantJudgeWeight(hostToken: string, participantId: string, weight: number | null) {
+  const supabase = createAdminClient()
+  return applyJudgeWeights(supabase, hostToken, [{ participantId, weight }])
+}
+
+// Assigns one shared percentage across several participants at once,
+// dividing it evenly between them (e.g. 50% / 4 judges = 12.5% each) -
+// purely a data-entry convenience; each participant still ends up with
+// their own individual judge_weight, same as setParticipantJudgeWeight.
+export async function setGroupJudgeWeight(hostToken: string, participantIds: string[], totalWeight: number) {
+  if (participantIds.length === 0 || !(totalWeight > 0 && totalWeight <= 100)) {
+    return err('invalidJudgeWeight')
+  }
+  const perParticipant = totalWeight / participantIds.length
+  const supabase = createAdminClient()
+  return applyJudgeWeights(
+    supabase,
+    hostToken,
+    participantIds.map((participantId) => ({ participantId, weight: perParticipant }))
+  )
+}

@@ -131,6 +131,12 @@ create table participant (
   event_id uuid not null references event(id) on delete cascade,
   nickname text not null,
   session_token text not null unique default encode(gen_random_bytes(16), 'hex'),
+  -- Organizer-assigned "judge" weight (percentage points, e.g. 40 for 40%),
+  -- set from the host dashboard any time after joining. Null (the default)
+  -- means "regular" participant - regulars evenly split whatever
+  -- percentage isn't claimed by judges. See calculateResults in
+  -- src/lib/results.ts for how this folds into the final score.
+  judge_weight numeric check (judge_weight is null or (judge_weight > 0 and judge_weight <= 100)),
   created_at timestamptz not null default now()
 );
 create index participant_event_id_idx on participant(event_id);

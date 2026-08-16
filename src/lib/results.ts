@@ -117,6 +117,26 @@ export function resolveExternalScore(
   return null
 }
 
+// Combines "judge" scores (each carrying their own organizer-assigned
+// percentage weight) with "regular" scores, which evenly split whatever
+// percentage the judges present for this item didn't claim - e.g. one
+// judge at 40% + 5 regulars -> each regular effectively weighs 12%. When
+// there are no judges at all, every regular's share is 100/n, which makes
+// this reduce to exactly a plain average - so events with no judges score
+// identically to before this feature existed.
+function weightedFinalScore(judgeScores: WeightedScore[], regularScores: number[]): number {
+  const judgeWeightSum = judgeScores.reduce((a, s) => a + s.weight, 0)
+  const remaining = Math.max(0, 100 - judgeWeightSum)
+  const regularWeightEach = regularScores.length > 0 ? remaining / regularScores.length : 0
+
+  const weightedSum =
+    judgeScores.reduce((a, s) => a + s.score * s.weight, 0) +
+    regularScores.reduce((a, s) => a + s * regularWeightEach, 0)
+  const weightSum = judgeWeightSum + regularWeightEach * regularScores.length
+
+  return weightedSum / weightSum
+}
+
 // Per item, per participant:
 //   1. within each category the participant actually answered anything in,
 //      weighted average of its 'scale' sub-question scores:
@@ -128,16 +148,20 @@ export function resolveExternalScore(
 //      weighted average as the categories, using their own weight
 //   3. the participant's score for the item is that combined weighted
 //      average
-// The item's final score is the average of all participants' scores.
+// The item's final score combines every participant's score, weighted per
+// weightedFinalScore above (organizer-assigned judge weight if the
+// participant has one, otherwise an even split of the leftover).
 export function calculateResults(
   items: ItemRow[],
   categories: CategoryRow[],
   parameters: ParameterRow[],
   scores: ScoreRow[],
   externalCriteria: ExternalCriterionRow[] = [],
-  externalValues: ItemExternalValueRow[] = []
+  externalValues: ItemExternalValueRow[] = [],
+  participants: ParticipantRow[] = []
 ): ItemResult[] {
   const paramById = new Map(parameters.map((p) => [p.id, p]))
+  const judgeWeightByParticipant = new Map(participants.map((p) => [p.id, p.judge_weight]))
 
   const byItem = new Map<string, Map<string, ScoreRow[]>>()
   for (const s of scores) {
@@ -155,18 +179,25 @@ export function calculateResults(
 
     const externalContributions = externalContributionsForItem(item, externalCriteria, externalValues)
 
-    const participantScores: number[] = []
-    for (const rows of byParticipant.values()) {
+    const judgeScores: WeightedScore[] = []
+    const regularScores: number[] = []
+    for (const [participantId, rows] of byParticipant) {
       const score = computeParticipantItemScore(categories, paramById, rows, externalContributions)
-      if (score !== null) participantScores.push(score)
+      if (score === null) continue
+      const judgeWeight = judgeWeightByParticipant.get(participantId)
+      if (judgeWeight !== null && judgeWeight !== undefined) {
+        judgeScores.push({ weight: judgeWeight, score })
+      } else {
+        regularScores.push(score)
+      }
     }
 
-    if (participantScores.length === 0) {
+    const participantCount = judgeScores.length + regularScores.length
+    if (participantCount === 0) {
       return { item, finalScore: null, participantCount: 0 }
     }
 
-    const finalScore = participantScores.reduce((a, b) => a + b, 0) / participantScores.length
-    return { item, finalScore, participantCount: participantScores.length }
+    return { item, finalScore: weightedFinalScore(judgeScores, regularScores), participantCount }
   })
 }
 

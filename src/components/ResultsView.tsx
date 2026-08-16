@@ -154,7 +154,7 @@ export default function ResultsView({
   const activeValues = includeExternal ? externalValues : []
 
   const overallRanked = rankResults(
-    calculateResults(openItems, categories, parameters, scores, activeCriteria, activeValues)
+    calculateResults(openItems, categories, parameters, scores, activeCriteria, activeValues, participants)
   )
   const visibleOverallRanked = applyRevealMode(overallRanked, event.results_reveal_mode)
   const hasMultipleTypes = itemTypes.length > 1
@@ -171,8 +171,16 @@ export default function ResultsView({
   const myWinnerScore = winnerDetail?.participantScores.find((ps) => ps.participant.id === myParticipantId)
   const amIClosestForWinner = winnerDetail?.closest?.participant.id === myParticipantId
 
+  const hasWeightedJudges = participants.some((p) => p.judge_weight !== null)
+
   return (
     <div className="flex flex-col gap-8">
+      {hasWeightedJudges && (
+        <span className={`self-center rounded-full border border-white/20 px-3 py-1 text-xs font-medium ${theme.muted}`}>
+          {t('weightedJudgesActive')}
+        </span>
+      )}
+
       {externalCriteria.length > 0 && (
         <div className="flex gap-2 rounded-xl border border-white/20 p-1">
           {(
@@ -244,7 +252,7 @@ export default function ResultsView({
           const typeItems = openItems.filter((i) => i.item_type_id === itemType.id)
           if (typeItems.length === 0) return null
           const typeRanked = rankResults(
-            calculateResults(typeItems, categories, parameters, scores, activeCriteria, activeValues)
+            calculateResults(typeItems, categories, parameters, scores, activeCriteria, activeValues, participants)
           )
           const visibleTypeRanked = applyRevealMode(typeRanked, event.results_reveal_mode)
           if (visibleTypeRanked.length === 0) return null

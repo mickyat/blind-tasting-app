@@ -12,6 +12,8 @@ import {
   removeItemPhoto,
   updateItemLabel,
   updateItemVisibility,
+  setParticipantJudgeWeight,
+  setGroupJudgeWeight,
 } from '@/app/actions'
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
@@ -133,6 +135,90 @@ export default function HostDashboard({
     await updateItemVisibility(hostToken, itemId, includeInResults)
     setVisibilitySaving((prev) => ({ ...prev, [itemId]: false }))
   }
+
+  // Weighted judges: each participant either has no judge_weight (a
+  // "regular", the default) or an organizer-assigned percentage. Editing
+  // opens an inline input pre-filled from the participant's current
+  // weight; the group flow lets the organizer check off several
+  // participants and assign one shared percentage, divided evenly
+  // server-side (setGroupJudgeWeight).
+  const [judgeSelection, setJudgeSelection] = useState<Set<string>>(new Set())
+  const [editingJudgeId, setEditingJudgeId] = useState<string | null>(null)
+  const [editingWeightValue, setEditingWeightValue] = useState('')
+  const [groupWeightInput, setGroupWeightInput] = useState('')
+  const [judgeSaving, setJudgeSaving] = useState<Record<string, boolean>>({})
+  const [groupSaving, setGroupSaving] = useState(false)
+  const [judgeError, setJudgeError] = useState<string | null>(null)
+
+  function toggleJudgeSelection(participantId: string) {
+    setJudgeSelection((prev) => {
+      const next = new Set(prev)
+      if (next.has(participantId)) next.delete(participantId)
+      else next.add(participantId)
+      return next
+    })
+  }
+
+  function startEditingWeight(participant: ParticipantRow) {
+    setJudgeError(null)
+    setEditingJudgeId(participant.id)
+    setEditingWeightValue(participant.judge_weight !== null ? String(participant.judge_weight) : '')
+  }
+
+  async function commitSingleWeight(participantId: string) {
+    const raw = editingWeightValue.trim()
+    const weight = raw ? Number(raw) : null
+    if (raw && !(Number.isFinite(weight) && (weight as number) > 0 && (weight as number) <= 100)) {
+      setJudgeError(t('judges.invalidWeightHint'))
+      return
+    }
+    setJudgeSaving((prev) => ({ ...prev, [participantId]: true }))
+    const result = await setParticipantJudgeWeight(hostToken, participantId, weight)
+    setJudgeSaving((prev) => ({ ...prev, [participantId]: false }))
+    if ('errorKey' in result) {
+      setJudgeError(tRoot(`errors.${result.errorKey}`, result.errorParams))
+      return
+    }
+    setJudgeError(null)
+    setEditingJudgeId(null)
+    setParticipants((prev) => prev.map((p) => (p.id === participantId ? { ...p, judge_weight: weight } : p)))
+  }
+
+  async function clearJudgeWeight(participantId: string) {
+    setJudgeSaving((prev) => ({ ...prev, [participantId]: true }))
+    const result = await setParticipantJudgeWeight(hostToken, participantId, null)
+    setJudgeSaving((prev) => ({ ...prev, [participantId]: false }))
+    if ('ok' in result) {
+      setParticipants((prev) => prev.map((p) => (p.id === participantId ? { ...p, judge_weight: null } : p)))
+    }
+  }
+
+  async function applyGroupWeight() {
+    setJudgeError(null)
+    if (judgeSelection.size === 0) {
+      setJudgeError(t('judges.selectAtLeastOneHint'))
+      return
+    }
+    const total = Number(groupWeightInput.trim())
+    if (!(Number.isFinite(total) && total > 0 && total <= 100)) {
+      setJudgeError(t('judges.invalidWeightHint'))
+      return
+    }
+    const ids = [...judgeSelection]
+    setGroupSaving(true)
+    const result = await setGroupJudgeWeight(hostToken, ids, total)
+    setGroupSaving(false)
+    if ('errorKey' in result) {
+      setJudgeError(tRoot(`errors.${result.errorKey}`, result.errorParams))
+      return
+    }
+    const perParticipant = total / ids.length
+    setParticipants((prev) => prev.map((p) => (judgeSelection.has(p.id) ? { ...p, judge_weight: perParticipant } : p)))
+    setJudgeSelection(new Set())
+    setGroupWeightInput('')
+  }
+
+  const totalJudgeWeight = participants.reduce((sum, p) => sum + (p.judge_weight ?? 0), 0)
 
   const refresh = useCallback(async () => {
     const { data: parts } = await supabase
@@ -373,6 +459,114 @@ export default function HostDashboard({
           </ul>
         )}
       </div>
+
+      {participants.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white p-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm font-medium text-zinc-700">{t('judges.heading')}</h2>
+            <p className="text-xs text-zinc-400">{t('judges.hint')}</p>
+            <p className="text-xs text-zinc-500">{t('judges.totalAssigned', { total: totalJudgeWeight })}</p>
+          </div>
+
+          <ul className="flex flex-col gap-1.5">
+            {participants.map((p) => {
+              const isEditing = editingJudgeId === p.id
+              return (
+                <li key={p.id} className="flex flex-col gap-2 rounded-lg border border-zinc-200 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={judgeSelection.has(p.id)}
+                      onChange={() => toggleJudgeSelection(p.id)}
+                    />
+                    {p.nickname}
+                    {p.judge_weight !== null && !isEditing && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                        {t('judges.weightBadge', { weight: p.judge_weight })}
+                      </span>
+                    )}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {isEditing ? (
+                      <>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step="any"
+                          autoFocus
+                          value={editingWeightValue}
+                          onChange={(e) => setEditingWeightValue(e.target.value)}
+                          className="w-20 rounded-lg border border-zinc-300 px-2 py-1 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => commitSingleWeight(p.id)}
+                          disabled={judgeSaving[p.id]}
+                          className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 disabled:opacity-50"
+                        >
+                          {t('judges.save')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingJudgeId(null)}
+                          className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-500"
+                        >
+                          {t('judges.cancel')}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => startEditingWeight(p)}
+                          className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700"
+                        >
+                          {p.judge_weight !== null ? t('judges.editWeight') : t('judges.markAsJudge')}
+                        </button>
+                        {p.judge_weight !== null && (
+                          <button
+                            type="button"
+                            onClick={() => clearJudgeWeight(p.id)}
+                            disabled={judgeSaving[p.id]}
+                            className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-500 disabled:opacity-50"
+                          >
+                            {t('judges.clear')}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-zinc-300 p-3">
+            <span className="text-xs text-zinc-500">{t('judges.groupHint')}</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step="any"
+              value={groupWeightInput}
+              onChange={(e) => setGroupWeightInput(e.target.value)}
+              placeholder={t('judges.groupWeightPlaceholder')}
+              className="w-24 rounded-lg border border-zinc-300 px-2 py-1.5 text-sm"
+            />
+            <button
+              type="button"
+              onClick={applyGroupWeight}
+              disabled={groupSaving}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 disabled:opacity-50"
+            >
+              {groupSaving ? t('judges.applying') : t('judges.applyToSelected', { count: judgeSelection.size })}
+            </button>
+          </div>
+
+          {judgeError && <p className="text-xs text-red-600">{judgeError}</p>}
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-zinc-700">{t('itemMediaHeading')}</h2>

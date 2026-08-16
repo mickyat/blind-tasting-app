@@ -71,6 +71,7 @@ export interface ParticipantRow {
   event_id: string
   nickname: string
   session_token: string
+  judge_weight: number | null
   created_at: string
 }
 

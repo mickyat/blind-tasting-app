@@ -53,7 +53,11 @@
     "photoSaveFailed": "Error saving the photo",
     "photoRemoveFailed": "Error removing the photo",
     "labelSaveFailed": "Error saving the description",
-    "visibilitySaveFailed": "Error saving the visibility setting"
+    "visibilitySaveFailed": "Error saving the visibility setting",
+    "participantNotInEvent": "This participant doesn't belong to this event",
+    "invalidJudgeWeight": "Invalid weight - enter a number between 0 and 100",
+    "judgeWeightExceeds100": "The total weight assigned to judges can't exceed 100%",
+    "judgeWeightSaveFailed": "Error saving the judge's weight"
   },
   "metadata": {
     "title": "TastePanel — Blind Tasting Events",
@@ -629,6 +633,23 @@
       "manualHeading": "Choose which items show in results",
       "noScoresYet": "This will open up once there's initial scoring",
       "showInResults": "Show in results"
+    },
+    "judges": {
+      "heading": "Judges & weights",
+      "hint": "Give specific participants (judges) a fixed weight in the final score - everyone else evenly splits whatever's left",
+      "totalAssigned": "Total weight assigned to judges: {total}%",
+      "weightBadge": "Judge - {weight}%",
+      "markAsJudge": "Mark as judge",
+      "editWeight": "Edit weight",
+      "clear": "Unmark",
+      "save": "Save",
+      "cancel": "Cancel",
+      "groupHint": "Or: check off several participants above and assign them one shared percentage, split evenly between them",
+      "groupWeightPlaceholder": "Group %",
+      "applyToSelected": "Apply to selected ({count})",
+      "applying": "Applying…",
+      "selectAtLeastOneHint": "Check at least one participant",
+      "invalidWeightHint": "Enter a number between 0 and 100"
     }
   },
   "organizerOrParticipantLink": {
@@ -673,6 +694,7 @@
     "pageSubtitle": "Results",
     "prizeAnnouncement": "🎁 Prize: {prize}",
     "createNextEvent": "Create your next event",
+    "weightedJudgesActive": "⚖ Weighted judging is active for this event",
     "waitingAfterAllDone": "Waiting for participants to finish rating items",
     "waitingManual": "Waiting for the organizer to open the results",
     "withExternal": "With external criteria",
