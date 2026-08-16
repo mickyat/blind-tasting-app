@@ -492,5 +492,43 @@
     "toastedOak": "קלוי/עץ אלון",
     "vanillaSweet": "וניל/מתוק",
     "smoky": "מעושן"
+  },
+  "hostPage": {
+    "invalidLink": "קישור ניהול לא תקין",
+    "invalidLinkHint": "בדוק שהעתקת את הקישור המלא",
+    "eventNotFound": "האירוע לא נמצא",
+    "subtitle": "ניהול האירוע"
+  },
+  "hostDashboard": {
+    "shareLinkLabel": "קישור למשתתפים",
+    "copy": "העתק",
+    "copied": "הועתק!",
+    "resultsLinkLabel": "קישור למסך הקרנה / תוצאות",
+    "goToResults": "מעבר למסך התוצאות ←",
+    "participantsHeading": "משתתפים ({count})",
+    "noParticipantsYet": "עדיין אף אחד לא הצטרף",
+    "done": "✓ סיים",
+    "pending": "⏳ {done}/{total}",
+    "reminderSent": "נשלח!",
+    "sendReminder": "שלח תזכורת",
+    "missing": "חסר: {items}",
+    "itemMediaHeading": "תמונה/תיאור לכל פריט (מוצג בתוצאות במקום \"פריט מספר X\")",
+    "removePhoto": "הסר תמונה",
+    "uploadingPhoto": "מעלה…",
+    "customLabelCaption": "תיאור חופשי (למשל: יין X, 120 ש\"ח)",
+    "saving": "שומר…",
+    "saved": "נשמר ✓",
+    "externalCriteriaHeading": "קריטריונים חיצוניים",
+    "visibilityLabel": "אופן חשיפת תוצאות: {mode}",
+    "visibilityManual": "ידני",
+    "visibilityAfterAllDone": "אחרי שכולם סיימו",
+    "visibilityLive": "חי",
+    "openingAll": "פותח…",
+    "openAllResults": "הצג תוצאות לכל הפריטים",
+    "perItemPublishHeading": "פרסום נפרד לכל פריט",
+    "published": "פורסם ✓",
+    "publishing": "מפרסם…",
+    "publish": "פרסם",
+    "autoRevealHint": "התוצאות ייחשפו אוטומטית לפי ההגדרה שבחרת, פריט אחר פריט"
   }
 }

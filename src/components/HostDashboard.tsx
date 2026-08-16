@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import {
   openResults,
@@ -34,12 +35,6 @@ interface Props {
   externalValues: ItemExternalValueRow[]
 }
 
-const VISIBILITY_LABELS: Record<string, string> = {
-  manual: 'ידני',
-  after_all_done: 'אחרי שכולם סיימו',
-  live: 'חי',
-}
-
 export default function HostDashboard({
   hostToken,
   event,
@@ -49,6 +44,12 @@ export default function HostDashboard({
   externalCriteria,
   externalValues,
 }: Props) {
+  const t = useTranslations('hostDashboard')
+  const visibilityLabels: Record<string, string> = {
+    manual: t('visibilityManual'),
+    after_all_done: t('visibilityAfterAllDone'),
+    live: t('visibilityLive'),
+  }
   const [supabase] = useState(() => createClient())
   const [participants, setParticipants] = useState<ParticipantRow[]>([])
   const [scores, setScores] = useState<ScoreRow[]>([])
@@ -198,7 +199,14 @@ export default function HostDashboard({
     setTimeout(() => setReminded((prev) => ({ ...prev, [participantId]: false })), 2000)
   }
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  // Read after mount (not directly at render time) so the server-rendered
+  // HTML and the client's first hydration pass agree (both start with an
+  // empty origin) - this update then lands as a normal post-hydration
+  // re-render instead of a hydration mismatch.
+  const [origin, setOrigin] = useState('')
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
   const shareLink = `${origin}/e/${event.share_token}`
   const resultsLink = `${origin}/e/${event.share_token}/results`
 
@@ -211,7 +219,7 @@ export default function HostDashboard({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4">
-        <span className="text-xs font-medium text-zinc-500">קישור למשתתפים</span>
+        <span className="text-xs font-medium text-zinc-500">{t('shareLinkLabel')}</span>
         <div className="flex items-center gap-2">
           <code className="flex-1 overflow-x-auto whitespace-nowrap text-xs text-zinc-700">
             {shareLink}
@@ -220,13 +228,13 @@ export default function HostDashboard({
             onClick={() => copy(shareLink, 'share')}
             className="shrink-0 rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium"
           >
-            {copied === 'share' ? 'הועתק!' : 'העתק'}
+            {copied === 'share' ? t('copied') : t('copy')}
           </button>
         </div>
       </div>
 
       <div className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4">
-        <span className="text-xs font-medium text-zinc-500">קישור למסך הקרנה / תוצאות</span>
+        <span className="text-xs font-medium text-zinc-500">{t('resultsLinkLabel')}</span>
         <div className="flex items-center gap-2">
           <code className="flex-1 overflow-x-auto whitespace-nowrap text-xs text-zinc-700">
             {resultsLink}
@@ -235,7 +243,7 @@ export default function HostDashboard({
             onClick={() => copy(resultsLink, 'results')}
             className="shrink-0 rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium"
           >
-            {copied === 'results' ? 'הועתק!' : 'העתק'}
+            {copied === 'results' ? t('copied') : t('copy')}
           </button>
         </div>
         <a
@@ -244,14 +252,16 @@ export default function HostDashboard({
           rel="noopener noreferrer"
           className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-center text-xs font-semibold text-zinc-700"
         >
-          מעבר למסך התוצאות ←
+          {t('goToResults')}
         </a>
       </div>
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-zinc-700">משתתפים ({participants.length})</h2>
+        <h2 className="text-sm font-medium text-zinc-700">
+          {t('participantsHeading', { count: participants.length })}
+        </h2>
         {participants.length === 0 ? (
-          <p className="text-sm text-zinc-400">עדיין אף אחד לא הצטרף</p>
+          <p className="text-sm text-zinc-400">{t('noParticipantsYet')}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {participants.map((p) => {
@@ -275,7 +285,7 @@ export default function HostDashboard({
                           isDone ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                         }`}
                       >
-                        {isDone ? '✓ סיים' : `⏳ ${doneItems.length}/${itemsState.length}`}
+                        {isDone ? t('done') : t('pending', { done: doneItems.length, total: itemsState.length })}
                       </span>
                       {!isDone && (
                         <button
@@ -283,14 +293,14 @@ export default function HostDashboard({
                           onClick={() => sendReminder(p.id)}
                           className="shrink-0 rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600"
                         >
-                          {reminded[p.id] ? 'נשלח!' : 'שלח תזכורת'}
+                          {reminded[p.id] ? t('reminderSent') : t('sendReminder')}
                         </button>
                       )}
                     </div>
                   </div>
                   {!isDone && pendingItems.length > 0 && (
                     <span className="text-xs text-zinc-400">
-                      חסר: {pendingItems.map((i) => i.label).join(', ')}
+                      {t('missing', { items: pendingItems.map((i) => i.label).join(', ') })}
                     </span>
                   )}
                 </li>
@@ -301,7 +311,7 @@ export default function HostDashboard({
       </div>
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-zinc-700">תמונה/תיאור לכל פריט (מוצג בתוצאות במקום &quot;פריט מספר X&quot;)</h2>
+        <h2 className="text-sm font-medium text-zinc-700">{t('itemMediaHeading')}</h2>
         {itemsState.map((item) => (
           <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-3">
             <span className="text-sm font-medium text-zinc-800">{item.label}</span>
@@ -320,7 +330,7 @@ export default function HostDashboard({
                     disabled={photoUploading[item.id]}
                     className="rounded-lg border border-zinc-300 px-2 py-1.5 text-xs font-medium text-zinc-600 disabled:opacity-50"
                   >
-                    הסר תמונה
+                    {t('removePhoto')}
                   </button>
                 </div>
               ) : (
@@ -333,13 +343,13 @@ export default function HostDashboard({
                   className="text-xs text-zinc-600"
                 />
               )}
-              {photoUploading[item.id] && <span className="text-xs text-zinc-400">מעלה…</span>}
+              {photoUploading[item.id] && <span className="text-xs text-zinc-400">{t('uploadingPhoto')}</span>}
             </div>
             {photoError[item.id] && <p className="text-xs text-red-600">{photoError[item.id]}</p>}
             <label className="flex flex-col gap-1 text-xs text-zinc-500">
               <span className="flex items-center gap-1">
-                תיאור חופשי (למשל: יין X, 120 ש&quot;ח)
-                {labelSaving[item.id] && <span className="text-zinc-400">שומר…</span>}
+                {t('customLabelCaption')}
+                {labelSaving[item.id] && <span className="text-zinc-400">{t('saving')}</span>}
               </span>
               <input
                 value={labelState[item.id] ?? ''}
@@ -354,7 +364,7 @@ export default function HostDashboard({
 
       {externalCriteria.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-zinc-700">קריטריונים חיצוניים</h2>
+          <h2 className="text-sm font-medium text-zinc-700">{t('externalCriteriaHeading')}</h2>
           {itemsState.map((item) => {
             const itemCriteria = externalCriteria.filter((c) => c.item_type_id === item.item_type_id)
             if (itemCriteria.length === 0) return null
@@ -369,8 +379,8 @@ export default function HostDashboard({
                       <label key={crit.id} className="flex min-w-[110px] flex-1 flex-col gap-1 text-xs text-zinc-500">
                         <span className="flex items-center gap-1">
                           {crit.name}
-                          {externalSaving[key] && <span className="text-zinc-400">שומר…</span>}
-                          {externalSaved[key] && <span className="text-green-600">נשמר ✓</span>}
+                          {externalSaving[key] && <span className="text-zinc-400">{t('saving')}</span>}
+                          {externalSaved[key] && <span className="text-green-600">{t('saved')}</span>}
                         </span>
                         {crit.calc_type === 'options' ? (
                           <select
@@ -409,16 +419,16 @@ export default function HostDashboard({
 
       <div className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white p-4">
         <span className="text-xs font-medium text-zinc-500">
-          אופן חשיפת תוצאות: {VISIBILITY_LABELS[event.results_visibility]}
+          {t('visibilityLabel', { mode: visibilityLabels[event.results_visibility] })}
         </span>
 
         {event.results_visibility === 'manual' && (
           <>
             <button onClick={handleOpenResults} disabled={opening} className={PRIMARY_BUTTON_CLASS}>
-              {opening ? 'פותח…' : 'הצג תוצאות לכל הפריטים'}
+              {opening ? t('openingAll') : t('openAllResults')}
             </button>
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-zinc-500">פרסום נפרד לכל פריט</span>
+              <span className="text-xs font-medium text-zinc-500">{t('perItemPublishHeading')}</span>
               <ul className="flex flex-col gap-1.5">
                 {itemsState.map((item) => (
                   <li
@@ -427,7 +437,7 @@ export default function HostDashboard({
                   >
                     <span className="text-sm">{item.label}</span>
                     {item.results_open ? (
-                      <span className="text-xs font-medium text-green-600">פורסם ✓</span>
+                      <span className="text-xs font-medium text-green-600">{t('published')}</span>
                     ) : (
                       <button
                         type="button"
@@ -435,7 +445,7 @@ export default function HostDashboard({
                         disabled={openingItemId === item.id}
                         className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 disabled:opacity-50"
                       >
-                        {openingItemId === item.id ? 'מפרסם…' : 'פרסם'}
+                        {openingItemId === item.id ? t('publishing') : t('publish')}
                       </button>
                     )}
                   </li>
@@ -445,7 +455,7 @@ export default function HostDashboard({
           </>
         )}
         {event.results_visibility !== 'manual' && (
-          <p className="text-xs text-zinc-500">התוצאות ייחשפו אוטומטית לפי ההגדרה שבחרת, פריט אחר פריט</p>
+          <p className="text-xs text-zinc-500">{t('autoRevealHint')}</p>
         )}
       </div>
     </div>

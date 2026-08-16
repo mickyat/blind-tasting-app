@@ -1,8 +1,10 @@
+import { getTranslations } from 'next-intl/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import HostDashboard from '@/components/HostDashboard'
 
 export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
   const { hostToken } = await props.params
+  const t = await getTranslations('hostPage')
   const supabase = createAdminClient()
 
   const { data: admin } = await supabase
@@ -14,8 +16,8 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
   if (!admin) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center">
-        <h1 className="text-lg font-semibold">קישור ניהול לא תקין</h1>
-        <p className="text-sm text-zinc-500">בדוק שהעתקת את הקישור המלא</p>
+        <h1 className="text-lg font-semibold">{t('invalidLink')}</h1>
+        <p className="text-sm text-zinc-500">{t('invalidLinkHint')}</p>
       </main>
     )
   }
@@ -25,7 +27,7 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
   if (!event) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center">
-        <h1 className="text-lg font-semibold">האירוע לא נמצא</h1>
+        <h1 className="text-lg font-semibold">{t('eventNotFound')}</h1>
       </main>
     )
   }
@@ -67,7 +69,7 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">
       <header className="flex flex-col gap-1 text-center">
         <h1 className="text-xl font-bold">{event.title}</h1>
-        <p className="text-xs text-zinc-500">ניהול האירוע</p>
+        <p className="text-xs text-zinc-500">{t('subtitle')}</p>
       </header>
       <HostDashboard
         hostToken={hostToken}

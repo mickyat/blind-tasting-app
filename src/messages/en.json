@@ -492,5 +492,43 @@
     "toastedOak": "Toasted oak",
     "vanillaSweet": "Vanilla/sweet",
     "smoky": "Smoky"
+  },
+  "hostPage": {
+    "invalidLink": "Invalid management link",
+    "invalidLinkHint": "Check that you copied the full link",
+    "eventNotFound": "Event not found",
+    "subtitle": "Event management"
+  },
+  "hostDashboard": {
+    "shareLinkLabel": "Link for participants",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "resultsLinkLabel": "Link for the screening / results screen",
+    "goToResults": "Go to the results screen ←",
+    "participantsHeading": "Participants ({count})",
+    "noParticipantsYet": "No one has joined yet",
+    "done": "✓ Done",
+    "pending": "⏳ {done}/{total}",
+    "reminderSent": "Sent!",
+    "sendReminder": "Send reminder",
+    "missing": "Missing: {items}",
+    "itemMediaHeading": "Photo/description per item (shown in results instead of \"Item number X\")",
+    "removePhoto": "Remove photo",
+    "uploadingPhoto": "Uploading…",
+    "customLabelCaption": "Free-text description (e.g. Wine X, $30)",
+    "saving": "Saving…",
+    "saved": "Saved ✓",
+    "externalCriteriaHeading": "External criteria",
+    "visibilityLabel": "Results visibility: {mode}",
+    "visibilityManual": "Manual",
+    "visibilityAfterAllDone": "After everyone's done",
+    "visibilityLive": "Live",
+    "openingAll": "Opening…",
+    "openAllResults": "Show results for all items",
+    "perItemPublishHeading": "Publish items individually",
+    "published": "Published ✓",
+    "publishing": "Publishing…",
+    "publish": "Publish",
+    "autoRevealHint": "Results will be revealed automatically per your chosen setting, item by item"
   }
 }
