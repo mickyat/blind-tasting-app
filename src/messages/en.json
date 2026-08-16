@@ -57,7 +57,8 @@
     "participantNotInEvent": "This participant doesn't belong to this event",
     "invalidJudgeWeight": "Invalid weight - enter a number between 0 and 100",
     "judgeWeightExceeds100": "The total weight assigned to judges can't exceed 100%",
-    "judgeWeightSaveFailed": "Error saving the judge's weight"
+    "judgeWeightSaveFailed": "Error saving the judge's weight",
+    "deleteEventFailed": "Error deleting the event"
   },
   "metadata": {
     "title": "TastePanel — Blind Tasting Events",
@@ -65,7 +66,8 @@
   },
   "home": {
     "title": "TastePanel",
-    "subtitle": "Create a blind tasting event, share a link with your guests, and get live, auto-calculated results"
+    "subtitle": "Create a blind tasting event, share a link with your guests, and get live, auto-calculated results",
+    "eventDeleted": "Event deleted successfully"
   },
   "localeSwitcher": {
     "he": "עברית",
@@ -650,6 +652,16 @@
       "applying": "Applying…",
       "selectAtLeastOneHint": "Check at least one participant",
       "invalidWeightHint": "Enter a number between 0 and 100"
+    },
+    "dangerZone": {
+      "heading": "Danger zone",
+      "hint": "Deleting the event is final and cannot be undone",
+      "deleteButton": "Delete event",
+      "confirmTitle": "Delete \"{title}\"?",
+      "confirmBody": "This action is irreversible and will permanently delete all participants, scores, and items in this event.",
+      "cancel": "Cancel",
+      "confirmDelete": "Yes, delete permanently",
+      "deleting": "Deleting…"
     }
   },
   "organizerOrParticipantLink": {

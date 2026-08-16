@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/client'
@@ -14,9 +15,11 @@ import {
   updateItemVisibility,
   setParticipantJudgeWeight,
   setGroupJudgeWeight,
+  deleteEvent,
 } from '@/app/actions'
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
+import { removeMyEvent } from '@/components/MyEvents'
 import type {
   CategoryRow,
   ChecklistAnswerRow,
@@ -50,6 +53,7 @@ export default function HostDashboard({
 }: Props) {
   const t = useTranslations('hostDashboard')
   const tRoot = useTranslations()
+  const router = useRouter()
   const visibilityLabels: Record<string, string> = {
     manual: t('visibilityManual'),
     after_all_done: t('visibilityAfterAllDone'),
@@ -219,6 +223,22 @@ export default function HostDashboard({
   }
 
   const totalJudgeWeight = participants.reduce((sum, p) => sum + (p.judge_weight ?? 0), 0)
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  async function handleDeleteEvent() {
+    setDeleting(true)
+    const result = await deleteEvent(hostToken)
+    if ('errorKey' in result) {
+      setDeleting(false)
+      setDeleteError(tRoot(`errors.${result.errorKey}`, result.errorParams))
+      return
+    }
+    removeMyEvent(hostToken)
+    router.push('/?deleted=1')
+  }
 
   const refresh = useCallback(async () => {
     const { data: parts } = await supabase
@@ -743,6 +763,54 @@ export default function HostDashboard({
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 rounded-xl border-2 border-red-300 bg-red-50 p-4">
+        <h2 className="text-sm font-bold text-red-700">{t('dangerZone.heading')}</h2>
+        <p className="text-xs text-red-600">{t('dangerZone.hint')}</p>
+        <button
+          type="button"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="self-start rounded-lg border-2 border-red-400 bg-white px-4 py-2 text-sm font-semibold text-red-700"
+        >
+          {t('dangerZone.deleteButton')}
+        </button>
+        {deleteError && <p className="text-xs text-red-700">{deleteError}</p>}
+      </div>
+
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => !deleting && setShowDeleteConfirm(false)}
+        >
+          <div
+            className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border-2 border-red-400 bg-white p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-red-700">
+              {t('dangerZone.confirmTitle', { title: event.title })}
+            </h3>
+            <p className="text-sm text-zinc-600">{t('dangerZone.confirmBody')}</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50"
+              >
+                {t('dangerZone.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteEvent}
+                disabled={deleting}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {deleting ? t('dangerZone.deleting') : t('dangerZone.confirmDelete')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

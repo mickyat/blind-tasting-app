@@ -28,6 +28,15 @@ export function saveMyEvent(entry: SavedEvent) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
 }
 
+// Called after a successful deleteEvent so this browser's "My Events" list
+// doesn't keep a dangling entry pointing at a host_token that no longer
+// resolves to anything.
+export function removeMyEvent(hostToken: string) {
+  if (typeof window === 'undefined') return
+  const updated = getMyEvents().filter((e) => e.hostToken !== hostToken)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+}
+
 // Lets a participant-facing screen check "is the person looking at this on
 // their own device the organizer?" - only works if they created the event
 // from this same browser (host_token was saved locally at creation time,

@@ -530,6 +530,28 @@ export async function updateItemLabel(hostToken: string, itemId: string, customL
 // the organizer pick which items actually appear on the shared results
 // screen (e.g. hide the lowest scorers in a sensitive competition). The
 // full data stays in the DB either way; this only controls display.
+// Hard-deletes the event and everything under it (item_type, item,
+// category, parameter, external_criterion, item_external_value,
+// participant, score, checklist_answer, event_admin) - the schema's
+// on delete cascade chain (event -> item_type/participant -> item/score/
+// checklist_answer -> category/... -> parameter, see supabase/schema.sql)
+// does the actual cleanup; this action only needs to delete the `event`
+// row itself. No extra authorization beyond hostToken - deleting is a
+// host-dashboard action same as every other one in this file.
+export async function deleteEvent(hostToken: string) {
+  const supabase = createAdminClient()
+  const { data: admin } = await supabase
+    .from('event_admin')
+    .select('event_id')
+    .eq('host_token', hostToken)
+    .maybeSingle()
+  if (!admin) return err('invalidHostLink')
+
+  const { error } = await supabase.from('event').delete().eq('id', admin.event_id)
+  if (error) return err('deleteEventFailed')
+  return { ok: true }
+}
+
 export async function updateItemVisibility(hostToken: string, itemId: string, includeInResults: boolean) {
   const supabase = createAdminClient()
   const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)

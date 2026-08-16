@@ -57,7 +57,8 @@
     "participantNotInEvent": "המשתתף לא שייך לאירוע הזה",
     "invalidJudgeWeight": "משקל לא תקין - יש להזין מספר בין 0 ל-100",
     "judgeWeightExceeds100": "סך כל המשקלים שהוקצו לשופטים לא יכול לעבור 100%",
-    "judgeWeightSaveFailed": "שגיאה בשמירת משקל השופט"
+    "judgeWeightSaveFailed": "שגיאה בשמירת משקל השופט",
+    "deleteEventFailed": "שגיאה במחיקת האירוע"
   },
   "metadata": {
     "title": "פאנל הטעם — TastePanel",
@@ -65,7 +66,8 @@
   },
   "home": {
     "title": "פאנל הטעם",
-    "subtitle": "צור אירוע טעימה עיוורת, שתף קישור עם המשתתפים, וקבל תוצאות מחושבות בזמן אמת"
+    "subtitle": "צור אירוע טעימה עיוורת, שתף קישור עם המשתתפים, וקבל תוצאות מחושבות בזמן אמת",
+    "eventDeleted": "האירוע נמחק בהצלחה"
   },
   "localeSwitcher": {
     "he": "עברית",
@@ -650,6 +652,16 @@
       "applying": "מחיל…",
       "selectAtLeastOneHint": "יש לסמן לפחות משתתף אחד",
       "invalidWeightHint": "יש להזין מספר בין 0 ל-100"
+    },
+    "dangerZone": {
+      "heading": "אזור מסוכן",
+      "hint": "מחיקת האירוע היא סופית ואינה ניתנת לביטול",
+      "deleteButton": "מחק אירוע",
+      "confirmTitle": "למחוק את \"{title}\"?",
+      "confirmBody": "הפעולה בלתי הפיכה ותמחק לצמיתות את כל המשתתפים, הציונים והפריטים של האירוע.",
+      "cancel": "ביטול",
+      "confirmDelete": "כן, מחק לצמיתות",
+      "deleting": "מוחק…"
     }
   },
   "organizerOrParticipantLink": {
