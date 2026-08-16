@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/client'
 import {
   openResults,
@@ -10,6 +11,7 @@ import {
   uploadItemPhoto,
   removeItemPhoto,
   updateItemLabel,
+  updateItemVisibility,
 } from '@/app/actions'
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
@@ -123,6 +125,15 @@ export default function HostDashboard({
     }
   }
 
+  const [visibilitySaving, setVisibilitySaving] = useState<Record<string, boolean>>({})
+
+  async function handleToggleVisibility(itemId: string, includeInResults: boolean) {
+    setItemsState((prev) => prev.map((i) => (i.id === itemId ? { ...i, include_in_results: includeInResults } : i)))
+    setVisibilitySaving((prev) => ({ ...prev, [itemId]: true }))
+    await updateItemVisibility(hostToken, itemId, includeInResults)
+    setVisibilitySaving((prev) => ({ ...prev, [itemId]: false }))
+  }
+
   const refresh = useCallback(async () => {
     const { data: parts } = await supabase
       .from('participant')
@@ -157,9 +168,13 @@ export default function HostDashboard({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'score' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'checklist_answer' }, () => refresh())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'item' }, (payload) => {
-        const updated = payload.new as { id: string; results_open?: boolean }
+        const updated = payload.new as { id: string; results_open?: boolean; include_in_results?: boolean }
         setItemsState((prev) =>
-          prev.map((i) => (i.id === updated.id ? { ...i, results_open: Boolean(updated.results_open) } : i))
+          prev.map((i) =>
+            i.id === updated.id
+              ? { ...i, results_open: Boolean(updated.results_open), include_in_results: Boolean(updated.include_in_results) }
+              : i
+          )
         )
       })
       .subscribe()
@@ -217,6 +232,34 @@ export default function HostDashboard({
     setTimeout(() => setCopied(null), 1500)
   }
 
+  // Rendered once at a high pixel size so the download is print-quality;
+  // the on-screen <canvas> is just scaled down with CSS.
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    if (!origin || !qrCanvasRef.current) return
+    QRCode.toCanvas(qrCanvasRef.current, shareLink, { width: 1024, margin: 1 }).catch(() => {})
+  }, [origin, shareLink])
+
+  function downloadQrPng() {
+    const canvas = qrCanvasRef.current
+    if (!canvas) return
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = `${event.title || 'event'}-qr.png`
+    a.click()
+  }
+
+  async function downloadQrSvg() {
+    const svg = await QRCode.toString(shareLink, { type: 'svg', width: 1024, margin: 1 })
+    const blob = new Blob([svg], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${event.title || 'event'}-qr.svg`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4">
@@ -231,6 +274,26 @@ export default function HostDashboard({
           >
             {copied === 'share' ? t('copied') : t('copy')}
           </button>
+        </div>
+        <div className="flex flex-col items-center gap-2 border-t border-zinc-200 pt-3">
+          <span className="text-xs text-zinc-500">{t('qr.hint')}</span>
+          <canvas ref={qrCanvasRef} className="h-36 w-36 rounded-lg border border-zinc-200" />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={downloadQrPng}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700"
+            >
+              {t('qr.downloadPng')}
+            </button>
+            <button
+              type="button"
+              onClick={downloadQrSvg}
+              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700"
+            >
+              {t('qr.downloadSvg')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -459,6 +522,35 @@ export default function HostDashboard({
           <p className="text-xs text-zinc-500">{t('autoRevealHint')}</p>
         )}
       </div>
+
+      {event.results_reveal_mode === 'manual' && (
+        <div className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white p-4">
+          <span className="text-xs font-medium text-zinc-500">{t('revealMode.manualHeading')}</span>
+          {scores.length === 0 ? (
+            <p className="text-xs text-zinc-500">{t('revealMode.noScoresYet')}</p>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {itemsState.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2"
+                >
+                  <span className="text-sm">{item.custom_label ? `${item.label} — ${item.custom_label}` : item.label}</span>
+                  <label className="flex items-center gap-2 text-xs font-medium text-zinc-700">
+                    {visibilitySaving[item.id] && <span className="text-zinc-400">{t('saving')}</span>}
+                    <input
+                      type="checkbox"
+                      checked={item.include_in_results}
+                      onChange={(e) => handleToggleVisibility(item.id, e.target.checked)}
+                    />
+                    {t('revealMode.showInResults')}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -52,7 +52,8 @@
     "photoUploadFailed": "Error uploading the photo, please try again",
     "photoSaveFailed": "Error saving the photo",
     "photoRemoveFailed": "Error removing the photo",
-    "labelSaveFailed": "Error saving the description"
+    "labelSaveFailed": "Error saving the description",
+    "visibilitySaveFailed": "Error saving the visibility setting"
   },
   "metadata": {
     "title": "TastePanel — Blind Tasting Events",
@@ -156,6 +157,18 @@
       "afterAllDoneHint": "Results are revealed automatically once every participant has rated everything",
       "live": "Live",
       "liveHint": "Results are shown and update live from the very first score"
+    },
+    "revealMode": {
+      "heading": "What shows on the public results screen",
+      "subHint": "Full data always stays saved for you - this only controls what participants and outside viewers see",
+      "all": "Everything (default)",
+      "allHint": "The full ranking of every item is shown to everyone",
+      "top3": "Top 1-3 only",
+      "top3Hint": "Only the top 3 places are shown, the rest stay hidden",
+      "top1": "Top 1 only",
+      "top1Hint": "Only the winner is shown, no other ranking",
+      "manual": "Manual selection",
+      "manualHint": "Once there's scoring, you'll be able to pick exactly which items appear in results from the dashboard"
     },
     "unexpectedError": "Unexpected error, please try again",
     "submitting": "Creating event…",
@@ -589,7 +602,17 @@
     "published": "Published ✓",
     "publishing": "Publishing…",
     "publish": "Publish",
-    "autoRevealHint": "Results will be revealed automatically per your chosen setting, item by item"
+    "autoRevealHint": "Results will be revealed automatically per your chosen setting, item by item",
+    "qr": {
+      "hint": "QR code to join - great for printing or projecting at large events",
+      "downloadPng": "Download PNG",
+      "downloadSvg": "Download SVG"
+    },
+    "revealMode": {
+      "manualHeading": "Choose which items show in results",
+      "noScoresYet": "This will open up once there's initial scoring",
+      "showInResults": "Show in results"
+    }
   },
   "organizerOrParticipantLink": {
     "goToManagement": "Are you the event organizer? Go to event management",

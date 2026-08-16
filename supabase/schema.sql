@@ -27,6 +27,8 @@ create table event (
     check (theme in ('default', 'wine', 'meat', 'beer', 'coffee', 'whiskey', 'cheese', 'sausage', 'burger', 'pizza')),
   logo_url text,
   prize_description text,
+  results_reveal_mode text not null default 'all'
+    check (results_reveal_mode in ('top1', 'top3', 'all', 'manual')),
   created_at timestamptz not null default now()
 );
 
@@ -58,7 +60,10 @@ create table item (
   -- Organizer-only, set after creation via the host dashboard (like the
   -- event logo, uploaded server-side, no OCR/processing of the image).
   image_url text,
-  custom_label text
+  custom_label text,
+  -- Only consulted when event.results_reveal_mode = 'manual' - organizer
+  -- picks which items appear on the shared results screen.
+  include_in_results boolean not null default true
 );
 create index item_item_type_id_idx on item(item_type_id);
 

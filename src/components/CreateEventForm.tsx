@@ -8,6 +8,7 @@ import type {
   EventTheme,
   ExternalCriterionCalcType,
   ParameterKind,
+  ResultsRevealMode,
   ResultsVisibility,
   ThresholdDirection,
 } from '@/lib/types'
@@ -178,11 +179,18 @@ export default function CreateEventForm() {
     { value: 'after_all_done', label: t('visibility.afterAllDone'), hint: t('visibility.afterAllDoneHint') },
     { value: 'live', label: t('visibility.live'), hint: t('visibility.liveHint') },
   ]
+  const revealModeOptions: { value: ResultsRevealMode; label: string; hint: string }[] = [
+    { value: 'all', label: t('revealMode.all'), hint: t('revealMode.allHint') },
+    { value: 'top3', label: t('revealMode.top3'), hint: t('revealMode.top3Hint') },
+    { value: 'top1', label: t('revealMode.top1'), hint: t('revealMode.top1Hint') },
+    { value: 'manual', label: t('revealMode.manual'), hint: t('revealMode.manualHint') },
+  ]
   const [step, setStep] = useState<'template' | 'form'>('template')
   const [theme, setTheme] = useState<EventTheme>('default')
   const [title, setTitle] = useState('')
   const [itemTypes, setItemTypes] = useState<ItemTypeDraft[]>([emptyItemType()])
   const [visibility, setVisibility] = useState<ResultsVisibility>('manual')
+  const [revealMode, setRevealMode] = useState<ResultsRevealMode>('all')
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)
@@ -458,6 +466,7 @@ export default function CreateEventForm() {
       const result = await createEvent({
         title,
         resultsVisibility: visibility,
+        resultsRevealMode: revealMode,
         theme,
         logoUrl,
         prizeDescription: prizeDescription.trim() || null,
@@ -1118,6 +1127,32 @@ export default function CreateEventForm() {
                   name="visibility"
                   checked={visibility === opt.value}
                   onChange={() => setVisibility(opt.value)}
+                />
+                {opt.label}
+              </span>
+              <span className="text-xs text-zinc-500">{opt.hint}</span>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-medium text-zinc-700">{t('revealMode.heading')}</h2>
+        <p className="text-xs text-zinc-400">{t('revealMode.subHint')}</p>
+        <div className="flex flex-col gap-2">
+          {revealModeOptions.map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex cursor-pointer flex-col gap-0.5 rounded-xl border p-3 ${
+                revealMode === opt.value ? 'border-zinc-800 bg-zinc-100' : 'border-zinc-300 bg-white'
+              }`}
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="radio"
+                  name="revealMode"
+                  checked={revealMode === opt.value}
+                  onChange={() => setRevealMode(opt.value)}
                 />
                 {opt.label}
               </span>

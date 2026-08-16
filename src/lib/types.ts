@@ -1,4 +1,5 @@
 export type ResultsVisibility = 'manual' | 'after_all_done' | 'live'
+export type ResultsRevealMode = 'top1' | 'top3' | 'all' | 'manual'
 export type EventTheme =
   | 'default'
   | 'wine'
@@ -21,6 +22,7 @@ export interface EventRow {
   theme: EventTheme
   logo_url: string | null
   prize_description: string | null
+  results_reveal_mode: ResultsRevealMode
   created_at: string
 }
 
@@ -40,6 +42,7 @@ export interface ItemRow {
   results_open: boolean
   image_url: string | null
   custom_label: string | null
+  include_in_results: boolean
 }
 
 export interface CategoryRow {

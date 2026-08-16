@@ -30,6 +30,18 @@ import type {
   ScoreRow,
 } from '@/lib/types'
 
+// Full results always stay in the DB - this only trims what the
+// public/shared screen renders, per the organizer's results_reveal_mode.
+// Slicing/filtering *before* handing the array to RankingList also makes the
+// displayed #1/#2/#3 numbering naturally match the visible set, so hidden
+// items' true positions are never implied.
+function applyRevealMode(ranked: ItemResult[], mode: EventRow['results_reveal_mode']): ItemResult[] {
+  if (mode === 'top1') return ranked.slice(0, 1)
+  if (mode === 'top3') return ranked.slice(0, 3)
+  if (mode === 'manual') return ranked.filter((r) => r.item.include_in_results)
+  return ranked
+}
+
 interface Props {
   event: EventRow
   itemTypes: ItemTypeRow[]
@@ -92,9 +104,13 @@ export default function ResultsView({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'score' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'checklist_answer' }, () => refresh())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'item' }, (payload) => {
-        const updated = payload.new as { id: string; results_open?: boolean }
+        const updated = payload.new as { id: string; results_open?: boolean; include_in_results?: boolean }
         setItemsState((prev) =>
-          prev.map((i) => (i.id === updated.id ? { ...i, results_open: Boolean(updated.results_open) } : i))
+          prev.map((i) =>
+            i.id === updated.id
+              ? { ...i, results_open: Boolean(updated.results_open), include_in_results: Boolean(updated.include_in_results) }
+              : i
+          )
         )
       })
       .subscribe()
@@ -140,6 +156,7 @@ export default function ResultsView({
   const overallRanked = rankResults(
     calculateResults(openItems, categories, parameters, scores, activeCriteria, activeValues)
   )
+  const visibleOverallRanked = applyRevealMode(overallRanked, event.results_reveal_mode)
   const hasMultipleTypes = itemTypes.length > 1
 
   const itemDetails = new Map(
@@ -149,7 +166,7 @@ export default function ResultsView({
     ])
   )
 
-  const winnerResult = overallRanked.find((r) => r.finalScore !== null)
+  const winnerResult = visibleOverallRanked.find((r) => r.finalScore !== null)
   const winnerDetail = winnerResult ? itemDetails.get(winnerResult.item.id) : undefined
   const myWinnerScore = winnerDetail?.participantScores.find((ps) => ps.participant.id === myParticipantId)
   const amIClosestForWinner = winnerDetail?.closest?.participant.id === myParticipantId
@@ -217,7 +234,7 @@ export default function ResultsView({
 
       <RankingList
         title={hasMultipleTypes ? t('overallRanking') : undefined}
-        results={overallRanked}
+        results={visibleOverallRanked}
         itemDetails={itemDetails}
         theme={theme}
       />
@@ -229,11 +246,13 @@ export default function ResultsView({
           const typeRanked = rankResults(
             calculateResults(typeItems, categories, parameters, scores, activeCriteria, activeValues)
           )
+          const visibleTypeRanked = applyRevealMode(typeRanked, event.results_reveal_mode)
+          if (visibleTypeRanked.length === 0) return null
           return (
             <RankingList
               key={itemType.id}
               title={t('typeRanking', { name: itemType.name })}
-              results={typeRanked}
+              results={visibleTypeRanked}
               itemDetails={itemDetails}
               theme={theme}
             />
@@ -250,7 +269,7 @@ export default function ResultsView({
       )}
 
       <DescriptiveSummary
-        items={openItems}
+        items={openItems.filter((i) => visibleOverallRanked.some((r) => r.item.id === i.id))}
         categories={categories}
         parameters={parameters}
         checklistAnswers={checklistAnswers}

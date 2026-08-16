@@ -5,6 +5,7 @@ import type {
   EventTheme,
   ExternalCriterionCalcType,
   ParameterKind,
+  ResultsRevealMode,
   ResultsVisibility,
   ThresholdDirection,
 } from '@/lib/types'
@@ -53,6 +54,7 @@ interface CreateEventInput {
   theme: EventTheme
   logoUrl: string | null
   prizeDescription: string | null
+  resultsRevealMode: ResultsRevealMode
 }
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
@@ -168,6 +170,7 @@ export async function createEvent(input: CreateEventInput) {
       theme: input.theme,
       logo_url: input.logoUrl,
       prize_description: input.prizeDescription,
+      results_reveal_mode: input.resultsRevealMode,
     })
     .select()
     .single()
@@ -513,5 +516,22 @@ export async function updateItemLabel(hostToken: string, itemId: string, customL
     .update({ custom_label: trimmed || null })
     .eq('id', itemId)
   if (error) return err('labelSaveFailed')
+  return { ok: true }
+}
+
+// Only meaningful when the event's results_reveal_mode is 'manual' - lets
+// the organizer pick which items actually appear on the shared results
+// screen (e.g. hide the lowest scorers in a sensitive competition). The
+// full data stays in the DB either way; this only controls display.
+export async function updateItemVisibility(hostToken: string, itemId: string, includeInResults: boolean) {
+  const supabase = createAdminClient()
+  const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)
+  if ('errorKey' in ownership) return ownership
+
+  const { error } = await supabase
+    .from('item')
+    .update({ include_in_results: includeInResults })
+    .eq('id', itemId)
+  if (error) return err('visibilitySaveFailed')
   return { ok: true }
 }
