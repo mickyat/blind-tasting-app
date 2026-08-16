@@ -25,6 +25,10 @@ const TEMPLATE_LABELS: Record<string, string> = {
   burger: 'המבורגר',
   pizza: 'פיצה',
   general_vote: 'תחרות / הצבעה כללית',
+  // Pre-rename id (see AGENTS/project memory: "wine_wset" -> "wine_pro") -
+  // events created before that rename still carry the old id in the DB,
+  // so this stays here purely so old data doesn't show as a raw id.
+  wine_wset: 'יין מקצועי - טעימה שיטתית (שם ישן)',
 }
 
 function templateLabel(id: string | null): string {
