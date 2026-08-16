@@ -29,6 +29,10 @@ create table event (
   prize_description text,
   results_reveal_mode text not null default 'all'
     check (results_reveal_mode in ('top1', 'top3', 'all', 'manual')),
+  -- Visitor's resolved locale at the moment they created the event (see
+  -- src/i18n/request.ts resolveLocale()) - null for events created before
+  -- this column existed. Only used by the owner-only /admin stats panel.
+  locale text,
   created_at timestamptz not null default now()
 );
 
@@ -38,6 +42,18 @@ create table event_admin (
   event_id uuid primary key references event(id) on delete cascade,
   host_token text not null unique default encode(gen_random_bytes(16), 'hex')
 );
+
+-- One row per FAILED /admin login attempt, keyed by IP - lets the login
+-- server action rate-limit brute-force password guessing across serverless
+-- instances (an in-memory counter wouldn't survive Vercel spinning up
+-- multiple function instances). No RLS policies -> service-role only, same
+-- as event_admin above.
+create table admin_login_attempt (
+  id uuid primary key default gen_random_uuid(),
+  ip text not null,
+  created_at timestamptz not null default now()
+);
+create index admin_login_attempt_ip_created_idx on admin_login_attempt(ip, created_at);
 
 -- An event can combine several tasting types in one evening (e.g. wine AND
 -- meat). Each item type has its own questionnaire (categories/parameters)
@@ -180,6 +196,7 @@ create index checklist_answer_item_id_idx on checklist_answer(item_id);
 
 alter table event enable row level security;
 alter table event_admin enable row level security;
+alter table admin_login_attempt enable row level security;
 alter table item_type enable row level security;
 alter table item enable row level security;
 alter table category enable row level security;

@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveLocale } from '@/i18n/request'
 import type {
   EventTheme,
   ExternalCriterionCalcType,
@@ -162,6 +163,11 @@ export async function createEvent(input: CreateEventInput) {
 
   const supabase = createAdminClient()
 
+  // Captured only for the owner-only /admin stats panel (Hebrew-vs-English
+  // breakdown) - not used anywhere in the app's own behavior, so a resolution
+  // failure here should never block event creation.
+  const locale = await resolveLocale().catch(() => null)
+
   const { data: event, error: eventError } = await supabase
     .from('event')
     .insert({
@@ -171,6 +177,7 @@ export async function createEvent(input: CreateEventInput) {
       logo_url: input.logoUrl,
       prize_description: input.prizeDescription,
       results_reveal_mode: input.resultsRevealMode,
+      locale,
     })
     .select()
     .single()

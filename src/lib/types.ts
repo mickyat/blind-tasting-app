@@ -23,6 +23,7 @@ export interface EventRow {
   logo_url: string | null
   prize_description: string | null
   results_reveal_mode: ResultsRevealMode
+  locale: string | null
   created_at: string
 }
 
