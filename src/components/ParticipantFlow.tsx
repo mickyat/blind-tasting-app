@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { THEME_STYLES } from '@/lib/theme'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
-import { getLastCategory, orderItemsByType } from '@/lib/results'
+import { getLastCategory, orderItemsByType, participantSessionKey } from '@/lib/results'
 import OrganizerOrParticipantLink from '@/components/OrganizerOrParticipantLink'
 import type {
   CategoryRow,
@@ -23,10 +23,6 @@ interface Props {
   items: ItemRow[]
   categories: CategoryRow[]
   parameters: ParameterRow[]
-}
-
-function sessionKey(eventId: string) {
-  return `bt_session_${eventId}`
 }
 
 function scoreKey(itemId: string, parameterId: string) {
@@ -85,7 +81,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
   useEffect(() => {
     let cancelled = false
     async function restore() {
-      const token = localStorage.getItem(sessionKey(event.id))
+      const token = localStorage.getItem(participantSessionKey(event.id))
       if (!token) {
         setChecking(false)
         return
@@ -100,7 +96,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
       if (cancelled) return
 
       if (!existing) {
-        localStorage.removeItem(sessionKey(event.id))
+        localStorage.removeItem(participantSessionKey(event.id))
         setChecking(false)
         return
       }
@@ -194,7 +190,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
         supabase={supabase}
         theme={theme}
         onJoined={(p) => {
-          localStorage.setItem(sessionKey(event.id), p.session_token)
+          localStorage.setItem(participantSessionKey(event.id), p.session_token)
           setParticipant(p)
         }}
       />

@@ -87,3 +87,22 @@ export const SWATCH_COLORS: Record<EventTheme, string> = {
   burger: 'bg-[#78350f]',
   pizza: 'bg-[#c2340f]',
 }
+
+function hexFromClass(cls: string): string {
+  return cls.match(/#([0-9a-fA-F]{6})/)?.[0] ?? '#000000'
+}
+
+// Raw hex colors for contexts that can't use Tailwind classes (e.g. Satori/
+// ImageResponse for the share-card images, which only understands literal
+// CSS values) - derived from THEME_STYLES itself so there's one source of
+// truth for each theme's palette instead of a second hardcoded color list.
+export const THEME_HEX: Record<EventTheme, { bg: string; accent: string; muted: string }> = Object.fromEntries(
+  (Object.keys(THEME_STYLES) as EventTheme[]).map((key) => [
+    key,
+    {
+      bg: hexFromClass(THEME_STYLES[key].bg),
+      accent: hexFromClass(THEME_STYLES[key].accent),
+      muted: hexFromClass(THEME_STYLES[key].muted),
+    },
+  ])
+) as Record<EventTheme, { bg: string; accent: string; muted: string }>

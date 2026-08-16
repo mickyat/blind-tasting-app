@@ -1,4 +1,22 @@
 {
+  "shareCard": {
+    "brandLine": "פאנל הטעם",
+    "winnerHeadline": "🏆 המנצח של הערב",
+    "winnerScoreLabel": "ציון סופי",
+    "participantHeadline": "הדירוג שלי",
+    "participantScoreLabel": "הציון שלי",
+    "averageScoreLabel": "ממוצע הקבוצה",
+    "closestBadge": "⭐ הכי קרוב לממוצע!",
+    "footer": "נוצר עם TastePanel",
+    "shareWinnerButton": "📤 שתפו את המנצח",
+    "shareMyCardButton": "📤 שתפו את הדירוג שלי",
+    "generatingImage": "מכינים תמונה…",
+    "winnerShareCaption": "{itemName} ניצח/ה באירוע \"{eventTitle}\"! 🏆 נוצר עם TastePanel",
+    "participantShareCaption": "הציון שלי ל{itemName} באירוע \"{eventTitle}\": {score} 🍷 נוצר עם TastePanel",
+    "downloadImage": "הורידו את התמונה",
+    "downloadHint": "התמונה נשמרה - אפשר להעלות אותה ידנית לוואטסאפ או אינסטגרם",
+    "shareFailed": "השיתוף נכשל, נסו שוב"
+  },
   "errors": {
     "noFileSelected": "לא נבחר קובץ",
     "unsupportedFileType": "סוג קובץ לא נתמך (רק PNG / JPEG / WebP / SVG)",

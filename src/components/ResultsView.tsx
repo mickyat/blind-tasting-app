@@ -5,11 +5,13 @@ import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { THEME_STYLES } from '@/lib/theme'
 import OrganizerOrParticipantLink from '@/components/OrganizerOrParticipantLink'
+import ShareCardButton from '@/components/ShareCardButton'
 import {
   buildAnsweredSet,
   calculateResults,
   getItemDetail,
   isItemDone,
+  participantSessionKey,
   rankResults,
   type ItemDetail,
   type ItemResult,
@@ -53,6 +55,14 @@ export default function ResultsView({
   const [checklistAnswers, setChecklistAnswers] = useState<ChecklistAnswerRow[]>([])
   const [itemsState, setItemsState] = useState<ItemRow[]>(items)
   const [includeExternal, setIncludeExternal] = useState(true)
+  const [myParticipantId, setMyParticipantId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const token = localStorage.getItem(participantSessionKey(event.id))
+    if (!token) return
+    const mine = participants.find((p) => p.session_token === token)
+    if (mine) setMyParticipantId(mine.id)
+  }, [event.id, participants])
 
   const refresh = useCallback(async () => {
     const { data: parts } = await supabase.from('participant').select('*').eq('event_id', event.id)
@@ -138,6 +148,11 @@ export default function ResultsView({
     ])
   )
 
+  const winnerResult = overallRanked.find((r) => r.finalScore !== null)
+  const winnerDetail = winnerResult ? itemDetails.get(winnerResult.item.id) : undefined
+  const myWinnerScore = winnerDetail?.participantScores.find((ps) => ps.participant.id === myParticipantId)
+  const amIClosestForWinner = winnerDetail?.closest?.participant.id === myParticipantId
+
   return (
     <div className="flex flex-col gap-8">
       {externalCriteria.length > 0 && (
@@ -159,6 +174,32 @@ export default function ResultsView({
               {opt.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {winnerResult && winnerResult.finalScore !== null && (
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-white/20 p-4">
+          <ShareCardButton
+            type="winner"
+            theme={event.theme}
+            eventTitle={event.title}
+            itemName={itemDisplayName(winnerResult.item)}
+            itemImageUrl={winnerResult.item.image_url}
+            score={winnerResult.finalScore.toFixed(2)}
+          />
+          {myWinnerScore && (
+            <ShareCardButton
+              type="participant"
+              theme={event.theme}
+              eventTitle={event.title}
+              itemName={itemDisplayName(winnerResult.item)}
+              itemImageUrl={winnerResult.item.image_url}
+              score={winnerResult.finalScore.toFixed(2)}
+              nickname={participants.find((p) => p.id === myParticipantId)?.nickname ?? ''}
+              participantScore={myWinnerScore.score.toFixed(2)}
+              isClosest={amIClosestForWinner}
+            />
+          )}
         </div>
       )}
 
@@ -208,6 +249,12 @@ export default function ResultsView({
       <OrganizerOrParticipantLink eventId={event.id} mutedClass={theme.muted} />
     </div>
   )
+}
+
+// Plain-string version of ItemIdentity below, for contexts that can't take
+// JSX (e.g. the share-card image, built from URL query params).
+function itemDisplayName(item: ItemRow): string {
+  return item.custom_label ? `${item.label} — ${item.custom_label}` : item.label
 }
 
 // The organizer sets these post-creation (host dashboard, §4) once judging

@@ -344,3 +344,11 @@ export function orderItemsByType(items: ItemRow[], itemTypes: ItemTypeRow[]): It
     return a.sort_order - b.sort_order
   })
 }
+
+// The localStorage key a participant's session_token is stored under for a
+// given event - shared between ParticipantFlow (sets it on join/restore)
+// and ResultsView (reads it to recognize "is the viewer of this results
+// page also a participant, and if so which one" for the personal share card).
+export function participantSessionKey(eventId: string) {
+  return `bt_session_${eventId}`
+}

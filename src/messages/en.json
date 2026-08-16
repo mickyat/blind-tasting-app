@@ -1,4 +1,22 @@
 {
+  "shareCard": {
+    "brandLine": "TastePanel",
+    "winnerHeadline": "🏆 Winner of the Night",
+    "winnerScoreLabel": "Final score",
+    "participantHeadline": "My Rating",
+    "participantScoreLabel": "My score",
+    "averageScoreLabel": "Group average",
+    "closestBadge": "⭐ Closest to the average!",
+    "footer": "Made with TastePanel",
+    "shareWinnerButton": "📤 Share the winner",
+    "shareMyCardButton": "📤 Share my rating",
+    "generatingImage": "Preparing image…",
+    "winnerShareCaption": "{itemName} won at \"{eventTitle}\"! 🏆 Made with TastePanel",
+    "participantShareCaption": "My score for {itemName} at \"{eventTitle}\": {score} 🍷 Made with TastePanel",
+    "downloadImage": "Download image",
+    "downloadHint": "Image saved - you can upload it manually to WhatsApp or Instagram",
+    "shareFailed": "Sharing failed, please try again"
+  },
   "errors": {
     "noFileSelected": "No file selected",
     "unsupportedFileType": "Unsupported file type (PNG / JPEG / WebP / SVG only)",

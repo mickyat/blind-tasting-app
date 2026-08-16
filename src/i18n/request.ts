@@ -26,8 +26,14 @@ export async function resolveLocale(): Promise<AppLocale> {
   return DEFAULT_LOCALE
 }
 
-export default getRequestConfig(async () => {
-  const locale = await resolveLocale()
+export default getRequestConfig(async ({ requestLocale }) => {
+  // requestLocale is only set when a caller explicitly requests one (e.g.
+  // getTranslations({locale, ...}) from a route handler that isn't tied to
+  // a specific visitor's cookie, like the share-card image generator) -
+  // normal page rendering never sets this since there's no [locale]
+  // routing, so it falls through to the usual cookie/geo resolution.
+  const explicit = await requestLocale
+  const locale = isSupportedLocale(explicit) ? explicit : await resolveLocale()
   return {
     locale,
     messages: (await import(`../messages/${locale}.json`)).default,
