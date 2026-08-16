@@ -517,6 +517,7 @@ export default function CreateEventForm() {
                   alt=""
                   fill
                   priority
+                  placeholder="blur"
                   sizes="(max-width: 480px) 50vw, 220px"
                   className="object-cover"
                 />
