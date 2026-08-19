@@ -1,7 +1,9 @@
 'use server'
 
+import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveLocale } from '@/i18n/request'
+import { VISITOR_ID_COOKIE, VISITOR_ID_COOKIE_MAX_AGE } from '@/lib/visitor'
 import type {
   EventTheme,
   ExternalCriterionCalcType,
@@ -321,6 +323,40 @@ export async function createEvent(input: CreateEventInput) {
       await rollback()
       return err('externalValueInsertFailed')
     }
+  }
+
+  // Durable per-visitor lifetime event count (see supabase/migration-014-
+  // plans.sql) - deliberately best-effort: this is purely informational
+  // for now (no live payment system to actually enforce against), so a
+  // failure here must never fail an otherwise-successful event creation.
+  try {
+    const cookieStore = await cookies()
+    let visitorId = cookieStore.get(VISITOR_ID_COOKIE)?.value
+    if (!visitorId) {
+      visitorId = crypto.randomUUID()
+      cookieStore.set(VISITOR_ID_COOKIE, visitorId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: VISITOR_ID_COOKIE_MAX_AGE,
+      })
+    }
+    const { data: existingCount } = await supabase
+      .from('visitor_event_count')
+      .select('event_count')
+      .eq('visitor_id', visitorId)
+      .maybeSingle()
+    if (existingCount) {
+      await supabase
+        .from('visitor_event_count')
+        .update({ event_count: existingCount.event_count + 1, updated_at: new Date().toISOString() })
+        .eq('visitor_id', visitorId)
+    } else {
+      await supabase.from('visitor_event_count').insert({ visitor_id: visitorId, event_count: 1 })
+    }
+  } catch {
+    // Best-effort, see comment above.
   }
 
   return {

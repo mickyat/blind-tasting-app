@@ -67,7 +67,8 @@
   "home": {
     "title": "TastePanel",
     "subtitle": "Create a blind tasting event, share a link with your guests, and get live, auto-calculated results",
-    "eventDeleted": "Event deleted successfully"
+    "eventDeleted": "Event deleted successfully",
+    "lifetimeLimitReached": "You've reached the {max}-event limit on the free plan - upgrades coming soon 🚀"
   },
   "localeSwitcher": {
     "he": "עברית",

@@ -55,6 +55,25 @@ create table admin_login_attempt (
 );
 create index admin_login_attempt_ip_created_idx on admin_login_attempt(ip, created_at);
 
+-- Source of truth for plan limits (soft-enforced only for now - no live
+-- payment system exists yet; see src/lib/plans.ts). One row today ('free').
+create table plan (
+  id text primary key,
+  max_participants_per_event integer not null,
+  max_lifetime_events integer not null
+);
+
+-- Durable per-visitor lifetime event count, keyed by an anonymous
+-- visitor_id cookie (src/lib/visitor.ts) set the first time a browser
+-- creates an event. Deliberately never decremented on event delete - see
+-- src/app/actions.ts createEvent. No RLS policies -> service-role only.
+create table visitor_event_count (
+  visitor_id uuid primary key,
+  event_count integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- An event can combine several tasting types in one evening (e.g. wine AND
 -- meat). Each item type has its own questionnaire (categories/parameters)
 -- and its own items.
@@ -197,6 +216,8 @@ create index checklist_answer_item_id_idx on checklist_answer(item_id);
 alter table event enable row level security;
 alter table event_admin enable row level security;
 alter table admin_login_attempt enable row level security;
+alter table plan enable row level security;
+alter table visitor_event_count enable row level security;
 alter table item_type enable row level security;
 alter table item enable row level security;
 alter table category enable row level security;
@@ -208,6 +229,9 @@ alter table score enable row level security;
 alter table checklist_answer enable row level security;
 
 create policy "event readable by anyone" on event
+  for select using (true);
+
+create policy "plan readable by anyone" on plan
   for select using (true);
 
 create policy "item_type readable by anyone" on item_type

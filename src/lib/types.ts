@@ -128,3 +128,16 @@ export interface ItemExternalValueRow {
   criterion_id: string
   raw_value: string | null
 }
+
+export interface PlanRow {
+  id: string
+  max_participants_per_event: number
+  max_lifetime_events: number
+}
+
+export interface VisitorEventCountRow {
+  visitor_id: string
+  event_count: number
+  created_at: string
+  updated_at: string
+}
