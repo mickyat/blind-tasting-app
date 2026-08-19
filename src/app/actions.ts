@@ -40,6 +40,12 @@ interface ExternalCriterionInput {
 interface ItemInput {
   label: string
   externalValues: Record<number, string>
+  // Client-generated (crypto.randomUUID(), never stored in the DB) - lets
+  // the form correlate each draft item with its real item.id after
+  // creation, so it knows which uploadItemPhoto(hostToken, itemId, ...)
+  // call goes with which pending photo file. Array position alone isn't
+  // reliable since items with an empty label get filtered out below.
+  clientKey: string
 }
 
 interface ItemTypeInput {
@@ -105,7 +111,7 @@ export async function createEvent(input: CreateEventInput) {
     name: t.name.trim(),
     template: t.template,
     items: t.items
-      .map((item) => ({ label: item.label.trim(), externalValues: item.externalValues }))
+      .map((item) => ({ label: item.label.trim(), externalValues: item.externalValues, clientKey: item.clientKey }))
       .filter((item) => item.label),
     categories: t.categories
       .map((c) => ({
@@ -363,6 +369,14 @@ export async function createEvent(input: CreateEventInput) {
     eventId: event.id as string,
     shareToken: event.share_token as string,
     hostToken: admin.host_token as string,
+    // itemRows is in the exact same order as itemPlan (a single insert
+    // call preserves order) - lets the client upload any pending per-item
+    // photo files right after creation, matched by clientKey rather than
+    // array position (which items got filtered out isn't visible here).
+    items: itemRows.map((row, idx) => ({
+      itemId: row.id as string,
+      clientKey: itemPlan[idx].item.clientKey,
+    })),
   }
 }
 

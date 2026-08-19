@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { createEvent, uploadEventLogo } from '@/app/actions'
+import { createEvent, uploadEventLogo, uploadItemPhoto } from '@/app/actions'
 import type {
   EventTheme,
   ExternalCriterionCalcType,
@@ -64,6 +64,12 @@ interface ExternalCriterionDraft {
 interface ItemDraft {
   label: string
   externalValues: Record<number, string>
+  // Not stored in the DB - lets createEvent's response tell us which real
+  // item.id corresponds to this draft, so a pending photo file (picked
+  // before the item exists yet) can be uploaded right after creation.
+  clientKey: string
+  photoFile: File | null
+  photoPreviewUrl: string | null
 }
 
 interface ItemTypeDraft {
@@ -83,7 +89,7 @@ function emptyCategory(): CategoryDraft {
 }
 
 function emptyItem(): ItemDraft {
-  return { label: '', externalValues: {} }
+  return { label: '', externalValues: {}, clientKey: crypto.randomUUID(), photoFile: null, photoPreviewUrl: null }
 }
 
 function emptyExternalCriterion(): ExternalCriterionDraft {
@@ -269,8 +275,21 @@ export default function CreateEventForm() {
   }
   function removeItemTypeItem(ti: number, i: number) {
     setItemTypes((prev) =>
-      prev.map((t, idx) => (idx === ti ? { ...t, items: t.items.filter((_, j) => j !== i) } : t))
+      prev.map((t, idx) => {
+        if (idx !== ti) return t
+        const removed = t.items[i]
+        if (removed?.photoPreviewUrl) URL.revokeObjectURL(removed.photoPreviewUrl)
+        return { ...t, items: t.items.filter((_, j) => j !== i) }
+      })
     )
+  }
+
+  function handleItemPhotoChange(ti: number, i: number, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const previous = itemTypes[ti].items[i].photoPreviewUrl
+    if (previous) URL.revokeObjectURL(previous)
+    updateItemTypeItem(ti, i, { photoFile: file, photoPreviewUrl: URL.createObjectURL(file) })
   }
   function updateItemExternalValue(ti: number, i: number, criterionIndex: number, value: string) {
     setItemTypes((prev) =>
@@ -473,7 +492,7 @@ export default function CreateEventForm() {
         itemTypes: itemTypes.map((t) => ({
           name: t.name,
           template: t.template,
-          items: t.items.map((it) => ({ label: it.label, externalValues: it.externalValues })),
+          items: t.items.map((it) => ({ label: it.label, externalValues: it.externalValues, clientKey: it.clientKey })),
           categories: t.categories.map((c) => ({
             name: c.name,
             weight: c.weight,
@@ -500,6 +519,28 @@ export default function CreateEventForm() {
         setError(t('unexpectedError'))
         return
       }
+
+      // Upload any photos picked before the items existed, now that we
+      // have real item ids - matched by clientKey (not array position,
+      // since items with an empty label were dropped server-side). Best
+      // effort: a failed photo upload shouldn't block getting to the
+      // dashboard, where the organizer can just add it there instead.
+      if ('items' in result && result.items) {
+        const itemIdByClientKey = new Map(result.items.map((it) => [it.clientKey, it.itemId]))
+        const uploads: Promise<unknown>[] = []
+        for (const t of itemTypes) {
+          for (const it of t.items) {
+            if (!it.photoFile) continue
+            const itemId = itemIdByClientKey.get(it.clientKey)
+            if (!itemId) continue
+            const fd = new FormData()
+            fd.append('file', it.photoFile)
+            uploads.push(uploadItemPhoto(result.hostToken, itemId, fd))
+          }
+        }
+        if (uploads.length > 0) await Promise.allSettled(uploads)
+      }
+
       saveMyEvent({
         title,
         hostToken: result.hostToken,
@@ -685,23 +726,44 @@ export default function CreateEventForm() {
                 {t('itemTypes.itemsHeading', { name: itemType.name || t('itemTypes.thisType') })}
               </h3>
               {itemType.items.map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    value={item.label}
-                    onChange={(e) => updateItemTypeItem(ti, i, { label: e.target.value })}
-                    placeholder={t('itemTypes.itemFallback', { n: i + 1 })}
-                    className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeItemTypeItem(ti, i)}
-                    disabled={itemType.items.length <= 2}
-                    aria-label={t('itemTypes.removeItem')}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
-                  >
-                    ✕
-                  </button>
+                <div key={item.clientKey} className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={item.label}
+                      onChange={(e) => updateItemTypeItem(ti, i, { label: e.target.value })}
+                      placeholder={t('itemTypes.itemFallback', { n: i + 1 })}
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base focus:border-zinc-500 focus:outline-none"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeItemTypeItem(ti, i)}
+                      disabled={itemType.items.length <= 2}
+                      aria-label={t('itemTypes.removeItem')}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-500 disabled:opacity-30"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 pr-1">
+                    {item.photoPreviewUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.photoPreviewUrl}
+                        alt=""
+                        className="h-10 w-10 rounded-lg border border-zinc-300 object-cover bg-white"
+                      />
+                    )}
+                    <label className="cursor-pointer rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600">
+                      {item.photoPreviewUrl ? tRoot('hostDashboard.changePhoto') : tRoot('hostDashboard.addPhoto')}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={(e) => handleItemPhotoChange(ti, i, e)}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                 </div>
               ))}
               <button
