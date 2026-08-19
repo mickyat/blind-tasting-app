@@ -20,6 +20,8 @@ import {
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import { removeMyEvent } from '@/components/MyEvents'
+import TextSizeControl from '@/components/TextSizeControl'
+import { useTextSize, type TextSize } from '@/lib/textSize'
 import type {
   CategoryRow,
   ChecklistAnswerRow,
@@ -31,6 +33,17 @@ import type {
   ParticipantRow,
   ScoreRow,
 } from '@/lib/types'
+
+// Unlike ParticipantFlow (which re-classes a handful of specific elements
+// per size), HostDashboard has far more text throughout - re-classing
+// every element individually would be a large, risky rewrite for what's a
+// legibility fix. Tailwind's text-* utilities are rem-based (relative to
+// the root <html> font-size, not the nearest ancestor), so a wrapping
+// element's own `font-size` has no cascading effect on them - `zoom` is
+// used instead since it actually rescales a whole subtree's rendered
+// layout (originated in and well-supported by Safari/WebKit, the exact
+// browser this was reported broken on).
+const ZOOM_FACTOR: Record<TextSize, number> = { normal: 1, large: 1.15, xlarge: 1.3 }
 
 interface Props {
   hostToken: string
@@ -56,6 +69,7 @@ export default function HostDashboard({
   const t = useTranslations('hostDashboard')
   const tRoot = useTranslations()
   const router = useRouter()
+  const [textSize, setTextSize] = useTextSize()
   const visibilityLabels: Record<string, string> = {
     manual: t('visibilityManual'),
     after_all_done: t('visibilityAfterAllDone'),
@@ -389,7 +403,9 @@ export default function HostDashboard({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" style={{ zoom: ZOOM_FACTOR[textSize] }}>
+      <TextSizeControl value={textSize} onChange={setTextSize} />
+
       <div className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4">
         <span className="text-xs font-medium text-zinc-500">{t('shareLinkLabel')}</span>
         <div className="flex items-center gap-2">

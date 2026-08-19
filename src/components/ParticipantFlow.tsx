@@ -8,6 +8,8 @@ import { THEME_STYLES } from '@/lib/theme'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import { getLastCategory, orderItemsByType, participantSessionKey } from '@/lib/results'
 import OrganizerOrParticipantLink from '@/components/OrganizerOrParticipantLink'
+import TextSizeControl from '@/components/TextSizeControl'
+import { useTextSize, type TextSize } from '@/lib/textSize'
 import type {
   CategoryRow,
   EventRow,
@@ -29,32 +31,22 @@ function scoreKey(itemId: string, parameterId: string) {
   return `${itemId}:${parameterId}`
 }
 
-type TextSize = 'normal' | 'large' | 'xlarge'
-
 const TEXT_SIZE_STYLES: Record<TextSize, { heading: string; label: string; button: string }> = {
   normal: { heading: 'text-sm', label: 'text-sm', button: 'h-11 w-11 text-sm' },
   large: { heading: 'text-base', label: 'text-base', button: 'h-12 w-12 text-base' },
   xlarge: { heading: 'text-lg', label: 'text-lg', button: 'h-14 w-14 text-lg' },
 }
 
-const TEXT_SIZE_KEYS: TextSize[] = ['normal', 'large', 'xlarge']
-const TEXT_SIZE_STORAGE_KEY = 'bt_text_size'
-
 export default function ParticipantFlow({ event, itemTypes, items, categories, parameters }: Props) {
   const theme = THEME_STYLES[event.theme]
   const t = useTranslations('participantFlow')
-  const textSizeLabels: Record<TextSize, string> = {
-    normal: t('textSizeNormal'),
-    large: t('textSizeLarge'),
-    xlarge: t('textSizeXLarge'),
-  }
   const [supabase] = useState(() => createClient())
   const [checking, setChecking] = useState(true)
   const [participant, setParticipant] = useState<ParticipantRow | null>(null)
   const [scores, setScores] = useState<Record<string, number>>({})
   const [checklistAnswers, setChecklistAnswers] = useState<Record<string, Set<string>>>({})
   const [activeItemId, setActiveItemId] = useState<string | undefined>(items[0]?.id)
-  const [textSize, setTextSize] = useState<TextSize>('normal')
+  const [textSize, setTextSize] = useTextSize()
   const [itemResultsOpen, setItemResultsOpen] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(items.map((i) => [i.id, i.results_open]))
   )
@@ -66,16 +58,6 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
   function flagSaveError() {
     setSaveError(true)
     setTimeout(() => setSaveError(false), 4000)
-  }
-
-  useEffect(() => {
-    const saved = localStorage.getItem(TEXT_SIZE_STORAGE_KEY)
-    if (saved === 'normal' || saved === 'large' || saved === 'xlarge') setTextSize(saved)
-  }, [])
-
-  function changeTextSize(size: TextSize) {
-    setTextSize(size)
-    localStorage.setItem(TEXT_SIZE_STORAGE_KEY, size)
   }
 
   useEffect(() => {
@@ -353,23 +335,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl bg-white px-4 py-2">
-        <span className="text-xs text-zinc-500">{t('textSizeLabel')}</span>
-        {TEXT_SIZE_KEYS.map((size) => (
-          <button
-            key={size}
-            type="button"
-            onClick={() => changeTextSize(size)}
-            className={`rounded-lg border px-2 py-1 text-xs font-medium ${
-              textSize === size
-                ? 'border-zinc-900 bg-zinc-900 text-white'
-                : 'border-zinc-300 bg-white text-zinc-700'
-            }`}
-          >
-            {textSizeLabels[size]}
-          </button>
-        ))}
-      </div>
+      <TextSizeControl value={textSize} onChange={setTextSize} />
 
       {itemTypes.length > 1 ? (
         <div className="flex flex-col gap-3">
