@@ -609,8 +609,8 @@ export default function HostDashboard({
           <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-3">
             <span className="text-sm font-medium text-zinc-800">{item.label}</span>
             <div className="flex items-center gap-3">
-              {item.image_url ? (
-                <div className="flex items-center gap-2">
+              {item.image_url && (
+                <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={item.image_url}
@@ -625,36 +625,26 @@ export default function HostDashboard({
                   >
                     {t('removePhoto')}
                   </button>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  <label
-                    className={`cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 ${photoUploading[item.id] ? 'pointer-events-none opacity-50' : ''}`}
-                  >
-                    {t('takePhoto')}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) => handlePhotoChange(item.id, e)}
-                      disabled={photoUploading[item.id]}
-                      className="hidden"
-                    />
-                  </label>
-                  <label
-                    className={`cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 ${photoUploading[item.id] ? 'pointer-events-none opacity-50' : ''}`}
-                  >
-                    {t('chooseFromGallery')}
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                      onChange={(e) => handlePhotoChange(item.id, e)}
-                      disabled={photoUploading[item.id]}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
+                </>
               )}
+              <label
+                className={`cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 ${photoUploading[item.id] ? 'pointer-events-none opacity-50' : ''}`}
+              >
+                {item.image_url ? t('changePhoto') : t('addPhoto')}
+                {/* A single input with no `capture` hint - iOS/Android both
+                    present the system picker's choice between camera and
+                    gallery this way. Adding `capture` risks skipping that
+                    picker and going straight to the camera on some Android
+                    browsers, silently removing the gallery option - which
+                    is exactly why this used to be two separate buttons. */}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={(e) => handlePhotoChange(item.id, e)}
+                  disabled={photoUploading[item.id]}
+                  className="hidden"
+                />
+              </label>
               {photoUploading[item.id] && <span className="text-xs text-zinc-400">{t('uploadingPhoto')}</span>}
             </div>
             {photoError[item.id] && <p className="text-xs text-red-600">{photoError[item.id]}</p>}
