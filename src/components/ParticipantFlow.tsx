@@ -400,6 +400,22 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
                 {t('itemLocked')}
               </div>
             )}
+            {activeItem.image_url && (
+              // Organizer-supplied photo, shown only when they've set one -
+              // for non-blind use cases (costume/cake contests etc.) where
+              // participants judge what they can see, not a blind taste.
+              // Never shows item.custom_label here (that stays a
+              // post-judging-only reveal, see ResultsView's ItemIdentity),
+              // only the photo itself.
+              <div className="flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={activeItem.image_url}
+                  alt=""
+                  className="max-h-72 w-full max-w-sm rounded-xl border border-zinc-300 object-cover"
+                />
+              </div>
+            )}
             {categories
               .filter((c) => c.item_type_id === activeItem.item_type_id)
               .map((category) => {

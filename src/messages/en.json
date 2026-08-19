@@ -610,6 +610,8 @@
     "missing": "Missing: {items}",
     "itemMediaHeading": "Photo/description per item (shown in results instead of \"Item number X\")",
     "removePhoto": "Remove photo",
+    "takePhoto": "📷 Take photo",
+    "chooseFromGallery": "🖼 Choose from gallery",
     "uploadingPhoto": "Uploading…",
     "customLabelCaption": "Free-text description (e.g. Wine X, $30)",
     "saving": "Saving…",

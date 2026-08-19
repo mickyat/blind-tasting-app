@@ -620,14 +620,33 @@ export default function HostDashboard({
                   </button>
                 </div>
               ) : (
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  capture="environment"
-                  onChange={(e) => handlePhotoChange(item.id, e)}
-                  disabled={photoUploading[item.id]}
-                  className="text-xs text-zinc-600"
-                />
+                <div className="flex flex-wrap gap-2">
+                  <label
+                    className={`cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 ${photoUploading[item.id] ? 'pointer-events-none opacity-50' : ''}`}
+                  >
+                    {t('takePhoto')}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => handlePhotoChange(item.id, e)}
+                      disabled={photoUploading[item.id]}
+                      className="hidden"
+                    />
+                  </label>
+                  <label
+                    className={`cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 ${photoUploading[item.id] ? 'pointer-events-none opacity-50' : ''}`}
+                  >
+                    {t('chooseFromGallery')}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      onChange={(e) => handlePhotoChange(item.id, e)}
+                      disabled={photoUploading[item.id]}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               )}
               {photoUploading[item.id] && <span className="text-xs text-zinc-400">{t('uploadingPhoto')}</span>}
             </div>
