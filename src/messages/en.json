@@ -603,6 +603,7 @@
     "resultsLinkLabel": "Link for the screening / results screen",
     "goToResults": "Go to the results screen ←",
     "participantsHeading": "Participants ({count})",
+    "participantLimitReached": "This event has passed the {max}-participant limit on the free plan - upgrades coming soon 🚀",
     "noParticipantsYet": "No one has joined yet",
     "done": "✓ Done",
     "pending": "⏳ {done}/{total}",

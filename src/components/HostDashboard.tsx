@@ -40,6 +40,7 @@ interface Props {
   parameters: ParameterRow[]
   externalCriteria: ExternalCriterionRow[]
   externalValues: ItemExternalValueRow[]
+  maxParticipants: number | null
 }
 
 export default function HostDashboard({
@@ -50,6 +51,7 @@ export default function HostDashboard({
   parameters,
   externalCriteria,
   externalValues,
+  maxParticipants,
 }: Props) {
   const t = useTranslations('hostDashboard')
   const tRoot = useTranslations()
@@ -438,6 +440,11 @@ export default function HostDashboard({
         <h2 className="text-sm font-medium text-zinc-700">
           {t('participantsHeading', { count: participants.length })}
         </h2>
+        {maxParticipants !== null && participants.length >= maxParticipants && (
+          <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm font-medium text-amber-800">
+            {t('participantLimitReached', { max: maxParticipants })}
+          </p>
+        )}
         {participants.length === 0 ? (
           <p className="text-sm text-zinc-400">{t('noParticipantsYet')}</p>
         ) : (
