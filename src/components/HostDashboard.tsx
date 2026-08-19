@@ -338,19 +338,27 @@ export default function HostDashboard({
     setTimeout(() => setCopied(null), 1500)
   }
 
-  // Rendered once at a high pixel size so the download is print-quality;
-  // the on-screen <canvas> is just scaled down with CSS.
+  // The `qrcode` library sets the canvas's *inline* style.width/height to
+  // match whatever `width` option it's given (lib/renderer/canvas.js) -
+  // that inline style silently wins over any Tailwind size class, which is
+  // exactly what made the on-screen QR render at a full 1024px "print"
+  // size on real phones and overlap the copy button next to it. Fix: never
+  // render the print-resolution QR into the visible canvas at all - the
+  // screen canvas only ever renders at QR_DISPLAY_SIZE, and the downloads
+  // generate their own high-res image independently via QRCode.toDataURL/
+  // toString (which create their own offscreen canvas, untouched by this
+  // one) instead of reading pixels back out of the small visible canvas.
+  const QR_DISPLAY_SIZE = 176
   const qrCanvasRef = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     if (!origin || !qrCanvasRef.current) return
-    QRCode.toCanvas(qrCanvasRef.current, shareLink, { width: 1024, margin: 1 }).catch(() => {})
+    QRCode.toCanvas(qrCanvasRef.current, shareLink, { width: QR_DISPLAY_SIZE, margin: 1 }).catch(() => {})
   }, [origin, shareLink])
 
-  function downloadQrPng() {
-    const canvas = qrCanvasRef.current
-    if (!canvas) return
+  async function downloadQrPng() {
+    const dataUrl = await QRCode.toDataURL(shareLink, { width: 1024, margin: 1 })
     const a = document.createElement('a')
-    a.href = canvas.toDataURL('image/png')
+    a.href = dataUrl
     a.download = `${event.title || 'event'}-qr.png`
     a.click()
   }
@@ -383,7 +391,7 @@ export default function HostDashboard({
         </div>
         <div className="flex flex-col items-center gap-2 border-t border-zinc-200 pt-3">
           <span className="text-xs text-zinc-500">{t('qr.hint')}</span>
-          <canvas ref={qrCanvasRef} className="h-36 w-36 rounded-lg border border-zinc-200" />
+          <canvas ref={qrCanvasRef} className="max-w-full rounded-lg border border-zinc-200" />
           <div className="flex gap-2">
             <button
               type="button"
