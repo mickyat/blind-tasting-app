@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { createEvent, uploadEventLogo, uploadItemPhoto } from '@/app/actions'
@@ -203,6 +203,13 @@ export default function CreateEventForm() {
   const [prizeDescription, setPrizeDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+
+  // Same two-hidden-inputs-behind-one-button pattern as HostDashboard's
+  // item photo picker (see its comment for why) - keyed by "ti-i" since
+  // items are nested per item type here.
+  const [photoMenuOpenFor, setPhotoMenuOpenFor] = useState<string | null>(null)
+  const cameraInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const galleryInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   function chooseTemplate(templateId: string) {
     const template = EVENT_TEMPLATES.find((tpl) => tpl.id === templateId)
@@ -754,15 +761,63 @@ export default function CreateEventForm() {
                         className="h-10 w-10 rounded-lg border border-zinc-300 object-cover bg-white"
                       />
                     )}
-                    <label className="cursor-pointer rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600">
-                      {item.photoPreviewUrl ? tRoot('hostDashboard.changePhoto') : tRoot('hostDashboard.addPhoto')}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPhotoMenuOpenFor((prev) => (prev === item.clientKey ? null : item.clientKey))
+                        }
+                        className="cursor-pointer rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600"
+                      >
+                        {item.photoPreviewUrl ? tRoot('hostDashboard.changePhoto') : tRoot('hostDashboard.addPhoto')}
+                      </button>
+                      {photoMenuOpenFor === item.clientKey && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setPhotoMenuOpenFor(null)} />
+                          <div className="absolute z-20 mt-1 flex flex-col overflow-hidden rounded-lg border border-zinc-300 bg-white shadow-lg">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                cameraInputRefs.current[item.clientKey]?.click()
+                                setPhotoMenuOpenFor(null)
+                              }}
+                              className="whitespace-nowrap px-3 py-2 text-start text-xs text-zinc-700 hover:bg-zinc-50"
+                            >
+                              {tRoot('hostDashboard.takePhoto')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                galleryInputRefs.current[item.clientKey]?.click()
+                                setPhotoMenuOpenFor(null)
+                              }}
+                              className="whitespace-nowrap border-t border-zinc-200 px-3 py-2 text-start text-xs text-zinc-700 hover:bg-zinc-50"
+                            >
+                              {tRoot('hostDashboard.chooseFromGallery')}
+                            </button>
+                          </div>
+                        </>
+                      )}
                       <input
+                        ref={(el) => {
+                          cameraInputRefs.current[item.clientKey] = el
+                        }}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => handleItemPhotoChange(ti, i, e)}
+                        className="hidden"
+                      />
+                      <input
+                        ref={(el) => {
+                          galleryInputRefs.current[item.clientKey] = el
+                        }}
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/svg+xml"
                         onChange={(e) => handleItemPhotoChange(ti, i, e)}
                         className="hidden"
                       />
-                    </label>
+                    </div>
                   </div>
                 </div>
               ))}

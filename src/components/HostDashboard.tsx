@@ -100,6 +100,18 @@ export default function HostDashboard({
   const [photoUploading, setPhotoUploading] = useState<Record<string, boolean>>({})
   const [photoError, setPhotoError] = useState<Record<string, string>>({})
 
+  // A single visible "Add/Change photo" button can't reliably guess which
+  // native file input covers both camera and gallery - real-device testing
+  // showed neither `capture="environment"` (camera only, no gallery on
+  // some Android builds) nor omitting `capture` (no camera option at all
+  // on some Android builds) works everywhere. So: two hidden inputs per
+  // item, one of each kind, and the visible button opens a small menu to
+  // choose which one to trigger - the menu is just app-level UI, not a
+  // native control, so it renders identically everywhere.
+  const [photoMenuOpenFor, setPhotoMenuOpenFor] = useState<string | null>(null)
+  const cameraInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const galleryInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
   async function saveLabel(itemId: string, value: string) {
     setLabelSaving((prev) => ({ ...prev, [itemId]: true }))
     await updateItemLabel(hostToken, itemId, value)
@@ -627,24 +639,68 @@ export default function HostDashboard({
                   </button>
                 </>
               )}
-              <label
-                className={`cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 ${photoUploading[item.id] ? 'pointer-events-none opacity-50' : ''}`}
-              >
-                {item.image_url ? t('changePhoto') : t('addPhoto')}
-                {/* A single input with no `capture` hint - iOS/Android both
-                    present the system picker's choice between camera and
-                    gallery this way. Adding `capture` risks skipping that
-                    picker and going straight to the camera on some Android
-                    browsers, silently removing the gallery option - which
-                    is exactly why this used to be two separate buttons. */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setPhotoMenuOpenFor((prev) => (prev === item.id ? null : item.id))}
+                  disabled={photoUploading[item.id]}
+                  className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 disabled:opacity-50"
+                >
+                  {item.image_url ? t('changePhoto') : t('addPhoto')}
+                </button>
+                {photoMenuOpenFor === item.id && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setPhotoMenuOpenFor(null)} />
+                    <div className="absolute z-20 mt-1 flex flex-col overflow-hidden rounded-lg border border-zinc-300 bg-white shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          cameraInputRefs.current[item.id]?.click()
+                          setPhotoMenuOpenFor(null)
+                        }}
+                        className="whitespace-nowrap px-3 py-2 text-start text-xs text-zinc-700 hover:bg-zinc-50"
+                      >
+                        {t('takePhoto')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          galleryInputRefs.current[item.id]?.click()
+                          setPhotoMenuOpenFor(null)
+                        }}
+                        className="whitespace-nowrap border-t border-zinc-200 px-3 py-2 text-start text-xs text-zinc-700 hover:bg-zinc-50"
+                      >
+                        {t('chooseFromGallery')}
+                      </button>
+                    </div>
+                  </>
+                )}
+                {/* Two hidden inputs, not one - neither `capture` alone
+                    (camera only, no gallery on some Android builds) nor
+                    omitting it (no camera at all on some Android builds)
+                    works reliably everywhere; see comment above the state. */}
                 <input
+                  ref={(el) => {
+                    cameraInputRefs.current[item.id] = el
+                  }}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => handlePhotoChange(item.id, e)}
+                  disabled={photoUploading[item.id]}
+                  className="hidden"
+                />
+                <input
+                  ref={(el) => {
+                    galleryInputRefs.current[item.id] = el
+                  }}
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/svg+xml"
                   onChange={(e) => handlePhotoChange(item.id, e)}
                   disabled={photoUploading[item.id]}
                   className="hidden"
                 />
-              </label>
+              </div>
               {photoUploading[item.id] && <span className="text-xs text-zinc-400">{t('uploadingPhoto')}</span>}
             </div>
             {photoError[item.id] && <p className="text-xs text-red-600">{photoError[item.id]}</p>}

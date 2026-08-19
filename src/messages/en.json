@@ -614,6 +614,8 @@
     "removePhoto": "Remove photo",
     "addPhoto": "Add photo",
     "changePhoto": "Change photo",
+    "takePhoto": "📷 Take photo",
+    "chooseFromGallery": "🖼 Choose from gallery",
     "uploadingPhoto": "Uploading…",
     "customLabelCaption": "Free-text description (e.g. Wine X, $30)",
     "saving": "Saving…",
