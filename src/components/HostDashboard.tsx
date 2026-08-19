@@ -360,10 +360,48 @@ export default function HostDashboard({
   const shareLink = `${origin}/e/${event.share_token}`
   const resultsLink = `${origin}/e/${event.share_token}/results`
 
-  async function copy(text: string, label: string) {
-    await navigator.clipboard.writeText(text)
+  // Deliberately NOT an async function - iOS Safari has a well-known
+  // clipboard bug (real device, not simulation - can't be verified from
+  // here) where the write silently fails, with no error, unless it
+  // happens perfectly synchronously inside the click handler's own call
+  // stack. Even having navigator.clipboard.writeText as the first line of
+  // an `async function` can be enough to lose that "user activation" in
+  // some WebKit versions - so this stays a plain function with the write
+  // called directly, chained with .then()/.catch() rather than awaited.
+  // The execCommand fallback covers both "Clipboard API unavailable" and
+  // "the write call itself was rejected" so copying never fails silently.
+  function markCopied(label: string) {
     setCopied(label)
     setTimeout(() => setCopied(null), 1500)
+  }
+
+  function fallbackCopy(text: string, label: string) {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+    try {
+      document.execCommand('copy')
+      markCopied(label)
+    } catch {
+      // Last resort: leave the text selected so the user can copy it
+      // manually (Cmd/Ctrl+C) instead of failing with no feedback at all.
+    }
+    document.body.removeChild(textarea)
+  }
+
+  function copy(text: string, label: string) {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => markCopied(label))
+        .catch(() => fallbackCopy(text, label))
+    } else {
+      fallbackCopy(text, label)
+    }
   }
 
   // The `qrcode` library sets the canvas's *inline* style.width/height to
