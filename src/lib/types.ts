@@ -24,6 +24,10 @@ export interface EventRow {
   prize_description: string | null
   results_reveal_mode: ResultsRevealMode
   locale: string | null
+  // One-time event_pass plans are assigned here (per-event); annual/
+  // business are assigned on visitor_event_count.plan_id instead
+  // (per-visitor). Defaults to 'free'.
+  plan_id: string
   created_at: string
 }
 
@@ -131,13 +135,17 @@ export interface ItemExternalValueRow {
 
 export interface PlanRow {
   id: string
-  max_participants_per_event: number
-  max_lifetime_events: number
+  // NULL means unlimited for that plan - always check for null before
+  // comparing, never treat it as 0.
+  max_participants_per_event: number | null
+  max_lifetime_events: number | null
 }
 
 export interface VisitorEventCountRow {
   visitor_id: string
   event_count: number
+  // The visitor's own plan (annual/business) - defaults to 'free'.
+  plan_id: string
   created_at: string
   updated_at: string
 }

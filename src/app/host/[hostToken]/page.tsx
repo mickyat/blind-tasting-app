@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getFreePlan } from '@/lib/plans'
+import { getPlan } from '@/lib/plans'
 import HostDashboard from '@/components/HostDashboard'
 
 export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
@@ -66,7 +66,9 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
       ? await supabase.from('item_external_value').select('*').in('item_id', itemIds)
       : { data: [] }
 
-  const plan = await getFreePlan()
+  // This event's own plan (a future event_pass upgrade would show up here
+  // via event.plan_id) - not always 'free', unlike before.
+  const plan = await getPlan(event.plan_id)
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-8">

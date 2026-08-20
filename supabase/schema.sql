@@ -56,23 +56,46 @@ create table admin_login_attempt (
 create index admin_login_attempt_ip_created_idx on admin_login_attempt(ip, created_at);
 
 -- Source of truth for plan limits (soft-enforced only for now - no live
--- payment system exists yet; see src/lib/plans.ts). One row today ('free').
+-- payment system exists yet; see src/lib/plans.ts). NULL in either limit
+-- column means "unlimited" for that plan.
 create table plan (
   id text primary key,
-  max_participants_per_event integer not null,
-  max_lifetime_events integer not null
+  max_participants_per_event integer,
+  max_lifetime_events integer
 );
 
 -- Durable per-visitor lifetime event count, keyed by an anonymous
 -- visitor_id cookie (src/lib/visitor.ts) set the first time a browser
 -- creates an event. Deliberately never decremented on event delete - see
 -- src/app/actions.ts createEvent. No RLS policies -> service-role only.
+-- plan_id: the visitor's own plan (annual/business are assigned per
+-- visitor, not per event) - defaults to 'free' until a real payment
+-- system can assign anything else.
 create table visitor_event_count (
   visitor_id uuid primary key,
   event_count integer not null default 0,
+  plan_id text not null default 'free' references plan(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+insert into plan (id, max_participants_per_event, max_lifetime_events) values
+  ('free', 12, 3),
+  -- One-time pass tied to a single event (event.plan_id below), not a
+  -- visitor - never assigned as a visitor's own plan, so
+  -- max_lifetime_events is not actually meaningful for this row.
+  ('event_pass', 50, null),
+  -- Annual subscription ($120/yr, not charged anywhere yet), tied to the
+  -- visitor, not a single event.
+  ('annual', 100, null),
+  -- Fully unlimited, not marketed/sold yet - a future row.
+  ('business', null, null);
+
+-- `event` is defined above `plan` in this file, so plan_id is added here
+-- via ALTER rather than inline in event's own CREATE TABLE, once `plan`
+-- actually exists. event_pass is assigned per-EVENT (a one-time pass
+-- unlocks one specific event), unlike annual/business above.
+alter table event add column plan_id text not null default 'free' references plan(id);
 
 -- An event can combine several tasting types in one evening (e.g. wine AND
 -- meat). Each item type has its own questionnaire (categories/parameters)
