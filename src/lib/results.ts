@@ -1,6 +1,7 @@
 import type {
   CategoryRow,
   ChecklistAnswerRow,
+  EventRow,
   ExternalCriterionRow,
   ItemExternalValueRow,
   ItemRow,
@@ -382,4 +383,38 @@ export function orderItemsByType(items: ItemRow[], itemTypes: ItemTypeRow[]): It
 // page also a participant, and if so which one" for the personal share card).
 export function participantSessionKey(eventId: string) {
   return `bt_session_${eventId}`
+}
+
+// Whether a participant/public viewer should see this item's REAL identity
+// (label/image_url/custom_label) yet, or only its blind_label placeholder.
+// Deliberately reuses the existing reveal mechanisms rather than adding a
+// new one:
+//   - results_reveal_mode='manual': tracks item.include_in_results, the
+//     exact same checkbox that already controls whether this item's
+//     SCORE appears in the public results ranking (see updateItemVisibility/
+//     "Manual selection" in HostDashboard) - checking it reveals both the
+//     score and the identity together, one action.
+//   - any other reveal mode (no per-item toggle exists there): falls back
+//     to item.results_open - the closest available "reveal action" is
+//     publishing that item's results at all (openItemResults / "open all").
+// Either way, results_open is always required first - an item can never
+// show its real identity before its results are open in some sense, even
+// if hide_item_identity was turned on but nothing has been published yet.
+export function isItemIdentityRevealed(item: ItemRow, event: EventRow): boolean {
+  if (!event.hide_item_identity) return true
+  if (!item.results_open) return false
+  if (event.results_reveal_mode === 'manual') return item.include_in_results
+  return true
+}
+
+// 1-based position of this item among others sharing its item_type_id,
+// ordered by sort_order - used for the auto "Item N" blind-label fallback
+// (item.blind_label overrides it when set). Deliberately relative to
+// same-type siblings only, not a raw/global sort_order value, so it stays
+// stable and matches how the create-event form numbers items per type.
+export function itemPositionInType(item: ItemRow, allItems: ItemRow[]): number {
+  const sameType = allItems
+    .filter((i) => i.item_type_id === item.item_type_id)
+    .sort((a, b) => a.sort_order - b.sort_order)
+  return sameType.findIndex((i) => i.id === item.id) + 1
 }

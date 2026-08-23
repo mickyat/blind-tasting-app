@@ -12,6 +12,8 @@ import {
   calculateResults,
   getItemDetail,
   isItemDone,
+  isItemIdentityRevealed,
+  itemPositionInType,
   participantSessionKey,
   rankResults,
   type ItemDetail,
@@ -62,6 +64,7 @@ export default function ResultsView({
   externalValues,
 }: Props) {
   const t = useTranslations('resultsView')
+  const tRoot = useTranslations()
   const [supabase] = useState(() => createClient())
   const [participants, setParticipants] = useState<ParticipantRow[]>([])
   const [scores, setScores] = useState<ScoreRow[]>([])
@@ -171,6 +174,20 @@ export default function ResultsView({
   const myWinnerScore = winnerDetail?.participantScores.find((ps) => ps.participant.id === myParticipantId)
   const amIClosestForWinner = winnerDetail?.closest?.participant.id === myParticipantId
 
+  // winnerResult is always drawn from visibleOverallRanked, which already
+  // only contains items that passed the reveal-mode filter - so it's
+  // always "identity revealed" by construction. This explicit check is
+  // still here as defense in depth (the whole point of this feature is to
+  // never leak an unrevealed item's identity, including via a share card),
+  // not because it's expected to ever actually be false.
+  const winnerRevealed = winnerResult ? isItemIdentityRevealed(winnerResult.item, event) : false
+  const winnerDisplayName = winnerResult
+    ? winnerRevealed
+      ? itemDisplayName(winnerResult.item)
+      : blindLabel(winnerResult.item, items, tRoot)
+    : ''
+  const winnerDisplayImageUrl = winnerResult && winnerRevealed ? winnerResult.item.image_url : null
+
   const hasWeightedJudges = participants.some((p) => p.judge_weight !== null)
 
   return (
@@ -215,8 +232,8 @@ export default function ResultsView({
               type="winner"
               theme={event.theme}
               eventTitle={event.title}
-              itemName={itemDisplayName(winnerResult.item)}
-              itemImageUrl={winnerResult.item.image_url}
+              itemName={winnerDisplayName}
+              itemImageUrl={winnerDisplayImageUrl}
               score={winnerResult.finalScore.toFixed(2)}
               prizeDescription={event.prize_description}
             />
@@ -225,8 +242,8 @@ export default function ResultsView({
                 type="participant"
                 theme={event.theme}
                 eventTitle={event.title}
-                itemName={itemDisplayName(winnerResult.item)}
-                itemImageUrl={winnerResult.item.image_url}
+                itemName={winnerDisplayName}
+                itemImageUrl={winnerDisplayImageUrl}
                 score={winnerResult.finalScore.toFixed(2)}
                 nickname={participants.find((p) => p.id === myParticipantId)?.nickname ?? ''}
                 participantScore={myWinnerScore.score.toFixed(2)}
@@ -245,6 +262,8 @@ export default function ResultsView({
         results={visibleOverallRanked}
         itemDetails={itemDetails}
         theme={theme}
+        event={event}
+        allItems={items}
       />
 
       {hasMultipleTypes &&
@@ -263,6 +282,8 @@ export default function ResultsView({
               results={visibleTypeRanked}
               itemDetails={itemDetails}
               theme={theme}
+              event={event}
+              allItems={items}
             />
           )
         })}
@@ -271,7 +292,18 @@ export default function ResultsView({
         <div className="flex flex-col gap-2 rounded-xl border border-dashed border-white/30 p-4">
           <span className={`text-xs font-medium ${theme.accent}`}>{t('notYetPublished')}</span>
           <span className={`text-sm ${theme.muted}`}>
-            {pendingItems.map((i) => (i.custom_label ? `${i.label} — ${i.custom_label}` : i.label)).join(', ')}
+            {pendingItems
+              .map((i) =>
+                // Pending items are, by definition, never revealed yet
+                // (results_open is false) - never leak their real
+                // name/custom_label here when identity-hiding is on.
+                isItemIdentityRevealed(i, event)
+                  ? i.custom_label
+                    ? `${i.label} — ${i.custom_label}`
+                    : i.label
+                  : blindLabel(i, items, tRoot)
+              )
+              .join(', ')}
           </span>
         </div>
       )}
@@ -283,6 +315,8 @@ export default function ResultsView({
         checklistAnswers={checklistAnswers}
         participantCount={participants.length}
         theme={theme}
+        event={event}
+        allItems={items}
       />
 
       <OrganizerOrParticipantLink eventId={event.id} mutedClass={theme.muted} />
@@ -291,16 +325,37 @@ export default function ResultsView({
 }
 
 // Plain-string version of ItemIdentity below, for contexts that can't take
-// JSX (e.g. the share-card image, built from URL query params).
+// JSX (e.g. the share-card image, built from URL query params). Only ever
+// called on an already-revealed item (see isItemIdentityRevealed) - never
+// pass a hidden item's data through this.
 function itemDisplayName(item: ItemRow): string {
   return item.custom_label ? `${item.label} — ${item.custom_label}` : item.label
 }
 
-// The organizer sets these post-creation (host dashboard, §4) once judging
-// is over - the item's `label` itself stays whatever anonymous tag the
-// organizer used to keep tasting blind (e.g. "פריט 1"), so this shows the
-// revealed real identity alongside it rather than replacing it outright.
-function ItemIdentity({ item }: { item: ItemRow }) {
+// The organizer's optional temporary placeholder (or an auto "Item N",
+// reusing createEventForm's own text so there's no duplicate translation),
+// shown instead of the real identity while event.hide_item_identity is on
+// and this item hasn't been revealed yet - see isItemIdentityRevealed.
+function blindLabel(
+  item: ItemRow,
+  allItems: ItemRow[],
+  t: (key: string, params?: Record<string, string | number | Date>) => string
+): string {
+  return item.blind_label?.trim() || t('createEventForm.itemTypes.itemFallback', { n: itemPositionInType(item, allItems) })
+}
+
+// The organizer sets custom_label/image_url post-creation (host dashboard,
+// §4) once judging is over - the item's `label` itself stays whatever
+// anonymous tag the organizer used to keep tasting blind (e.g. "פריט 1"),
+// so this shows the revealed real identity alongside it rather than
+// replacing it outright. When event.hide_item_identity is on and this
+// specific item hasn't been revealed yet, shows the blind placeholder
+// instead and never renders the real label/photo/description.
+function ItemIdentity({ item, event, allItems }: { item: ItemRow; event: EventRow; allItems: ItemRow[] }) {
+  const tRoot = useTranslations()
+  if (!isItemIdentityRevealed(item, event)) {
+    return <>{blindLabel(item, allItems, tRoot)}</>
+  }
   if (!item.image_url && !item.custom_label) return <>{item.label}</>
   return (
     <span className="inline-flex items-center gap-2 align-middle">
@@ -321,11 +376,15 @@ function RankingList({
   results,
   itemDetails,
   theme,
+  event,
+  allItems,
 }: {
   title?: string
   results: ItemResult[]
   itemDetails: Map<string, ItemDetail>
   theme: (typeof THEME_STYLES)[keyof typeof THEME_STYLES]
+  event: EventRow
+  allItems: ItemRow[]
 }) {
   const t = useTranslations('resultsView')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -385,7 +444,7 @@ function RankingList({
                 <div className="flex flex-col">
                   <span className="text-base font-semibold text-zinc-900">
                     {i === 0 && '🏆 '}
-                    <ItemIdentity item={r.item} />
+                    <ItemIdentity item={r.item} event={event} allItems={allItems} />
                   </span>
                   {r.participantCount > 0 && (
                     <span className="text-xs text-zinc-500">{t('ratingsCount', { count: r.participantCount })}</span>
@@ -504,6 +563,8 @@ function DescriptiveSummary({
   checklistAnswers,
   participantCount,
   theme,
+  event,
+  allItems,
 }: {
   items: ItemRow[]
   categories: CategoryRow[]
@@ -511,6 +572,8 @@ function DescriptiveSummary({
   checklistAnswers: ChecklistAnswerRow[]
   participantCount: number
   theme: (typeof THEME_STYLES)[keyof typeof THEME_STYLES]
+  event: EventRow
+  allItems: ItemRow[]
 }) {
   const t = useTranslations('resultsView')
   const checklistParams = parameters.filter((p) => p.kind === 'checklist')
@@ -530,7 +593,7 @@ function DescriptiveSummary({
         return (
           <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white p-4">
             <h3 className="text-sm font-semibold text-zinc-800">
-              <ItemIdentity item={item} />
+              <ItemIdentity item={item} event={event} allItems={allItems} />
             </h3>
             {itemParams.map((param) => {
               const counts = new Map<string, number>()

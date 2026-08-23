@@ -28,6 +28,8 @@ export interface EventRow {
   // business are assigned on visitor_event_count.plan_id instead
   // (per-visitor). Defaults to 'free'.
   plan_id: string
+  // Off by default - see src/lib/results.ts isItemIdentityRevealed().
+  hide_item_identity: boolean
   created_at: string
 }
 
@@ -48,6 +50,9 @@ export interface ItemRow {
   image_url: string | null
   custom_label: string | null
   include_in_results: boolean
+  // Only meaningful when event.hide_item_identity is on - null falls back
+  // to an auto "Item N" (see itemPositionInType in src/lib/results.ts).
+  blind_label: string | null
 }
 
 export interface CategoryRow {

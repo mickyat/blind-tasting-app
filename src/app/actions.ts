@@ -46,6 +46,10 @@ interface ItemInput {
   // call goes with which pending photo file. Array position alone isn't
   // reliable since items with an empty label get filtered out below.
   clientKey: string
+  // Organizer's optional temporary placeholder, only meaningful when
+  // hideItemIdentity (below) is on - null/empty falls back to an auto
+  // "Item N" computed client-side.
+  blindLabel: string | null
 }
 
 interface ItemTypeInput {
@@ -64,6 +68,7 @@ interface CreateEventInput {
   logoUrl: string | null
   prizeDescription: string | null
   resultsRevealMode: ResultsRevealMode
+  hideItemIdentity: boolean
 }
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
@@ -111,7 +116,12 @@ export async function createEvent(input: CreateEventInput) {
     name: t.name.trim(),
     template: t.template,
     items: t.items
-      .map((item) => ({ label: item.label.trim(), externalValues: item.externalValues, clientKey: item.clientKey }))
+      .map((item) => ({
+        label: item.label.trim(),
+        externalValues: item.externalValues,
+        clientKey: item.clientKey,
+        blindLabel: item.blindLabel?.trim() || null,
+      }))
       .filter((item) => item.label),
     categories: t.categories
       .map((c) => ({
@@ -185,6 +195,7 @@ export async function createEvent(input: CreateEventInput) {
       logo_url: input.logoUrl,
       prize_description: input.prizeDescription,
       results_reveal_mode: input.resultsRevealMode,
+      hide_item_identity: input.hideItemIdentity,
       locale,
     })
     .select()
@@ -234,6 +245,13 @@ export async function createEvent(input: CreateEventInput) {
         item_type_id: itemTypeRows[typeIndex].id,
         label: item.label,
         sort_order: idx,
+        blind_label: item.blindLabel,
+        // When identity-hiding is on, items must start hidden (not the
+        // column's normal default of true) - otherwise every item's real
+        // identity would be visible from the moment the event is created,
+        // defeating the whole feature. The organizer reveals each one via
+        // the existing manual-selection checkbox, same as today.
+        include_in_results: !input.hideItemIdentity,
       }))
     )
     .select()

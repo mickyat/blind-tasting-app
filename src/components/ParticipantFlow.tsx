@@ -6,7 +6,13 @@ import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { THEME_STYLES } from '@/lib/theme'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
-import { getLastCategory, orderItemsByType, participantSessionKey } from '@/lib/results'
+import {
+  getLastCategory,
+  isItemIdentityRevealed,
+  itemPositionInType,
+  orderItemsByType,
+  participantSessionKey,
+} from '@/lib/results'
 import OrganizerOrParticipantLink from '@/components/OrganizerOrParticipantLink'
 import TextSizeControl from '@/components/TextSizeControl'
 import { useTextSize, type TextSize } from '@/lib/textSize'
@@ -40,6 +46,7 @@ const TEXT_SIZE_STYLES: Record<TextSize, { heading: string; label: string; butto
 export default function ParticipantFlow({ event, itemTypes, items, categories, parameters }: Props) {
   const theme = THEME_STYLES[event.theme]
   const t = useTranslations('participantFlow')
+  const tRoot = useTranslations()
   const [supabase] = useState(() => createClient())
   const [checking, setChecking] = useState(true)
   const [participant, setParticipant] = useState<ParticipantRow | null>(null)
@@ -49,6 +56,13 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
   const [textSize, setTextSize] = useTextSize()
   const [itemResultsOpen, setItemResultsOpen] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(items.map((i) => [i.id, i.results_open]))
+  )
+  // Only actually consulted when event.hide_item_identity is on - tracked
+  // live for the same reason itemResultsOpen is: the organizer can flip
+  // this (the "Manual selection" checkbox) while a participant is already
+  // on this screen.
+  const [itemIncludeInResults, setItemIncludeInResults] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(items.map((i) => [i.id, i.include_in_results]))
   )
   const [finished, setFinished] = useState(false)
   const [reminder, setReminder] = useState(false)
@@ -122,8 +136,9 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
     const channel = supabase
       .channel(`participant-items-${event.id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'item' }, (payload) => {
-        const updated = payload.new as { id: string; results_open?: boolean }
+        const updated = payload.new as { id: string; results_open?: boolean; include_in_results?: boolean }
         setItemResultsOpen((prev) => ({ ...prev, [updated.id]: Boolean(updated.results_open) }))
+        setItemIncludeInResults((prev) => ({ ...prev, [updated.id]: Boolean(updated.include_in_results) }))
       })
       .subscribe()
     return () => {
@@ -288,6 +303,27 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
     ? orderedItems.findIndex((i) => i.id === activeItem.id) === orderedItems.length - 1
     : false
 
+  // isItemIdentityRevealed reads item.results_open/include_in_results off
+  // the item object itself, but those two fields are tracked live in
+  // separate state here (see itemResultsOpen/itemIncludeInResults above) -
+  // merge the live values in before asking, so a reveal the organizer just
+  // did shows up immediately without a page reload.
+  function isRevealed(item: ItemRow): boolean {
+    return isItemIdentityRevealed(
+      {
+        ...item,
+        results_open: itemResultsOpen[item.id] ?? item.results_open,
+        include_in_results: itemIncludeInResults[item.id] ?? item.include_in_results,
+      },
+      event
+    )
+  }
+
+  function displayLabel(item: ItemRow): string {
+    if (isRevealed(item)) return item.label
+    return item.blind_label?.trim() || tRoot('createEventForm.itemTypes.itemFallback', { n: itemPositionInType(item, items) })
+  }
+
   function renderItemTab(item: ItemRow) {
     return (
       <button
@@ -299,7 +335,7 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
             : 'border-zinc-300 bg-white text-zinc-700'
         }`}
       >
-        {item.label} {doneItemIds.has(item.id) ? '✓' : ''}
+        {displayLabel(item)} {doneItemIds.has(item.id) ? '✓' : ''}
         {itemResultsOpen[item.id] && ' 🔒'}
       </button>
     )
@@ -366,13 +402,16 @@ export default function ParticipantFlow({ event, itemTypes, items, categories, p
                 {t('itemLocked')}
               </div>
             )}
-            {activeItem.image_url && (
+            {activeItem.image_url && isRevealed(activeItem) && (
               // Organizer-supplied photo, shown only when they've set one -
               // for non-blind use cases (costume/cake contests etc.) where
               // participants judge what they can see, not a blind taste.
               // Never shows item.custom_label here (that stays a
-              // post-judging-only reveal, see ResultsView's ItemIdentity),
-              // only the photo itself.
+              // post-judging-only reveal, see ResultsView's ItemIdentity).
+              // isRevealed() is always true here unless the organizer
+              // explicitly turned on hide_item_identity for this event -
+              // existing events/uses (like a visible costume-contest photo)
+              // are completely unaffected, see isItemIdentityRevealed().
               <div className="flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img

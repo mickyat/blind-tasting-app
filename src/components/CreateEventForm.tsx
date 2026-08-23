@@ -70,6 +70,9 @@ interface ItemDraft {
   clientKey: string
   photoFile: File | null
   photoPreviewUrl: string | null
+  // Optional temporary placeholder, only used when the event-level
+  // hideItemIdentity setting is on - empty means "use the auto Item N".
+  blindLabel: string
 }
 
 interface ItemTypeDraft {
@@ -89,7 +92,14 @@ function emptyCategory(): CategoryDraft {
 }
 
 function emptyItem(): ItemDraft {
-  return { label: '', externalValues: {}, clientKey: crypto.randomUUID(), photoFile: null, photoPreviewUrl: null }
+  return {
+    label: '',
+    externalValues: {},
+    clientKey: crypto.randomUUID(),
+    photoFile: null,
+    photoPreviewUrl: null,
+    blindLabel: '',
+  }
 }
 
 function emptyExternalCriterion(): ExternalCriterionDraft {
@@ -197,6 +207,7 @@ export default function CreateEventForm() {
   const [itemTypes, setItemTypes] = useState<ItemTypeDraft[]>([emptyItemType()])
   const [visibility, setVisibility] = useState<ResultsVisibility>('manual')
   const [revealMode, setRevealMode] = useState<ResultsRevealMode>('all')
+  const [hideItemIdentity, setHideItemIdentity] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)
@@ -493,13 +504,19 @@ export default function CreateEventForm() {
         title,
         resultsVisibility: visibility,
         resultsRevealMode: revealMode,
+        hideItemIdentity,
         theme,
         logoUrl,
         prizeDescription: prizeDescription.trim() || null,
         itemTypes: itemTypes.map((t) => ({
           name: t.name,
           template: t.template,
-          items: t.items.map((it) => ({ label: it.label, externalValues: it.externalValues, clientKey: it.clientKey })),
+          items: t.items.map((it) => ({
+            label: it.label,
+            externalValues: it.externalValues,
+            clientKey: it.clientKey,
+            blindLabel: it.blindLabel.trim() || null,
+          })),
           categories: t.categories.map((c) => ({
             name: c.name,
             weight: c.weight,
@@ -819,6 +836,17 @@ export default function CreateEventForm() {
                       />
                     </div>
                   </div>
+                  {hideItemIdentity && (
+                    <label className="flex flex-col gap-1 pr-1 text-xs text-zinc-500">
+                      {t('hideIdentity.blindLabelCaption')}
+                      <input
+                        value={item.blindLabel}
+                        onChange={(e) => updateItemTypeItem(ti, i, { blindLabel: e.target.value })}
+                        placeholder={t('itemTypes.itemFallback', { n: i + 1 })}
+                        className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm focus:border-zinc-500 focus:outline-none"
+                      />
+                    </label>
+                  )}
                 </div>
               ))}
               <button
@@ -1300,6 +1328,19 @@ export default function CreateEventForm() {
             </label>
           ))}
         </div>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-zinc-700">
+          <input
+            type="checkbox"
+            checked={hideItemIdentity}
+            onChange={(e) => setHideItemIdentity(e.target.checked)}
+            className="mt-0.5"
+          />
+          {t('hideIdentity.label')}
+        </label>
+        <p className="text-xs text-zinc-400">{t('hideIdentity.hint')}</p>
       </section>
 
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}

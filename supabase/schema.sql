@@ -33,6 +33,12 @@ create table event (
   -- src/i18n/request.ts resolveLocale()) - null for events created before
   -- this column existed. Only used by the owner-only /admin stats panel.
   locale text,
+  -- Off by default. When on, participants/public viewers never see an
+  -- item's real label/photo/description until that item's results are
+  -- revealed - reuses results_reveal_mode='manual' + item.include_in_results
+  -- (or, outside manual mode, item.results_open) rather than a separate
+  -- reveal mechanism. See src/lib/results.ts isItemIdentityRevealed().
+  hide_item_identity boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -121,7 +127,11 @@ create table item (
   custom_label text,
   -- Only consulted when event.results_reveal_mode = 'manual' - organizer
   -- picks which items appear on the shared results screen.
-  include_in_results boolean not null default true
+  include_in_results boolean not null default true,
+  -- Only shown/used when event.hide_item_identity is on - the temporary
+  -- placeholder participants see instead of label/image_url/custom_label
+  -- until this item is revealed. Null falls back to an auto "Item N".
+  blind_label text
 );
 create index item_item_type_id_idx on item(item_type_id);
 

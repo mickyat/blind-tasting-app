@@ -177,6 +177,11 @@
       "manual": "Manual selection",
       "manualHint": "Once there's scoring, you'll be able to pick exactly which items appear in results from the dashboard"
     },
+    "hideIdentity": {
+      "label": "Hide item identity (name, photo, description) until revealed",
+      "hint": "Participants will see a temporary label like \"Item 1\" instead of the real name, until you reveal it - just like you already control when scores are revealed",
+      "blindLabelCaption": "Temporary label until revealed (optional - default: Item 1, Item 2...)"
+    },
     "unexpectedError": "Unexpected error, please try again",
     "submitting": "Creating event…",
     "submit": "Create event"
