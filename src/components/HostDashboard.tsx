@@ -18,6 +18,7 @@ import {
   deleteEvent,
 } from '@/app/actions'
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
+import { SHOW_PLAN_LIMIT_BANNERS } from '@/lib/config'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
 import { removeMyEvent } from '@/components/MyEvents'
 import TextSizeControl from '@/components/TextSizeControl'
@@ -506,7 +507,7 @@ export default function HostDashboard({
         <h2 className="text-sm font-medium text-zinc-700">
           {t('participantsHeading', { count: participants.length })}
         </h2>
-        {maxParticipants !== null && participants.length >= maxParticipants && (
+        {SHOW_PLAN_LIMIT_BANNERS && maxParticipants !== null && participants.length >= maxParticipants && (
           <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm font-medium text-amber-800">
             {t('participantLimitReached', { max: maxParticipants })}
           </p>

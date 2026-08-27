@@ -6,6 +6,7 @@ import LocaleSwitcher from '@/components/LocaleSwitcher'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPlan } from '@/lib/plans'
 import { VISITOR_ID_COOKIE } from '@/lib/visitor'
+import { SHOW_PLAN_LIMIT_BANNERS } from '@/lib/config'
 import type { AppLocale } from '@/i18n/locales'
 
 export default async function Home(props: PageProps<'/'>) {
@@ -54,7 +55,7 @@ export default async function Home(props: PageProps<'/'>) {
         <h1 className="text-2xl font-bold text-zinc-900">{t('title')}</h1>
         <p className="text-sm text-zinc-500">{t('subtitle')}</p>
       </header>
-      {reachedLifetimeLimit && lifetimeMax !== null && (
+      {SHOW_PLAN_LIMIT_BANNERS && reachedLifetimeLimit && lifetimeMax !== null && (
         <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm font-medium text-amber-800">
           {t('lifetimeLimitReached', { max: lifetimeMax })}
         </p>
