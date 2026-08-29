@@ -602,6 +602,7 @@
     "subtitle": "Event management"
   },
   "hostDashboard": {
+    "switchToRating": "Switch to rating screen",
     "shareLinkLabel": "Link for participants",
     "copy": "Copy",
     "copied": "Copied!",

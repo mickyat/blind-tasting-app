@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/client'
@@ -20,7 +21,7 @@ import {
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
 import { SHOW_PLAN_LIMIT_BANNERS } from '@/lib/config'
 import { PRIMARY_BUTTON_CLASS, SECONDARY_ACTION_BUTTON_CLASS } from '@/lib/ui'
-import { removeMyEvent } from '@/components/MyEvents'
+import { removeMyEvent, saveMyEvent, findHostTokenForEvent } from '@/components/MyEvents'
 import TextSizeControl from '@/components/TextSizeControl'
 import { useTextSize, type TextSize } from '@/lib/textSize'
 import type {
@@ -81,6 +82,19 @@ export default function HostDashboard({
   const [scores, setScores] = useState<ScoreRow[]>([])
   const [checklistAnswers, setChecklistAnswers] = useState<ChecklistAnswerRow[]>([])
   const [itemsState, setItemsState] = useState<ItemRow[]>(items)
+  // Backfills this browser's host_token->event link if it's missing (e.g. a
+  // bookmarked host link, or storage cleared after creation) - without it,
+  // OrganizerOrParticipantLink on the rating screen (the "back to
+  // management" side of the switch) wouldn't recognize this browser as the
+  // organizer. Guarded so a normal visit (already linked at creation time
+  // via CreateEventForm's saveMyEvent) doesn't overwrite the original
+  // createdAt shown in "My events".
+  useEffect(() => {
+    if (!findHostTokenForEvent(event.id)) {
+      saveMyEvent({ title: event.title, hostToken, eventId: event.id, createdAt: new Date().toISOString() })
+    }
+  }, [event.id, event.title, hostToken])
+
   const [opening, setOpening] = useState(false)
   const [justOpenedAll, setJustOpenedAll] = useState(false)
   const [openingItemId, setOpeningItemId] = useState<string | null>(null)
@@ -447,6 +461,13 @@ export default function HostDashboard({
   return (
     <div className="flex flex-col gap-6" style={{ zoom: ZOOM_FACTOR[textSize] }}>
       <TextSizeControl value={textSize} onChange={setTextSize} />
+
+      <Link
+        href={`/e/${event.share_token}`}
+        className={`text-center transition hover:brightness-95 ${PRIMARY_BUTTON_CLASS}`}
+      >
+        {t('switchToRating')}
+      </Link>
 
       <div className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4">
         <span className="text-xs font-medium text-zinc-500">{t('shareLinkLabel')}</span>

@@ -602,6 +602,7 @@
     "subtitle": "ניהול האירוע"
   },
   "hostDashboard": {
+    "switchToRating": "עבור למסך דירוג",
     "shareLinkLabel": "קישור למשתתפים",
     "copy": "העתק",
     "copied": "הועתק!",
