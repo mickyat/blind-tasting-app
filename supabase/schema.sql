@@ -11,6 +11,7 @@ drop table if exists item cascade;
 drop table if exists item_type cascade;
 drop table if exists event_admin cascade;
 drop table if exists event cascade;
+drop table if exists feedback cascade;
 
 create extension if not exists pgcrypto;
 
@@ -60,6 +61,21 @@ create table admin_login_attempt (
   created_at timestamptz not null default now()
 );
 create index admin_login_attempt_ip_created_idx on admin_login_attempt(ip, created_at);
+
+-- Free-text organizer feedback, submitted from the host dashboard and read
+-- only from the owner-only /admin panel. No RLS policies -> service-role
+-- only, same as admin_login_attempt above. event_ref is the event's
+-- share_token (not its internal id), just enough to cross-reference which
+-- event a note came from.
+create table feedback (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  event_ref text,
+  message text not null,
+  contact text,
+  locale text
+);
+create index feedback_created_at_idx on feedback(created_at desc);
 
 -- Source of truth for plan limits (soft-enforced only for now - no live
 -- payment system exists yet; see src/lib/plans.ts). NULL in either limit
@@ -241,7 +257,8 @@ create index checklist_answer_item_id_idx on checklist_answer(item_id);
 --   - event / item_type / item / category / parameter: publicly readable,
 --     never writable by anon (event creation & host actions go through
 --     server-side code using the service role key).
---   - event_admin: no policies at all -> invisible to anon, service-role only.
+--   - event_admin / feedback: no policies at all -> invisible to anon,
+--     service-role only.
 --   - participant / score / checklist_answer: publicly readable+writable,
 --     since joining and answering is meant to work for any visitor with the
 --     link, no login.
@@ -249,6 +266,7 @@ create index checklist_answer_item_id_idx on checklist_answer(item_id);
 alter table event enable row level security;
 alter table event_admin enable row level security;
 alter table admin_login_attempt enable row level security;
+alter table feedback enable row level security;
 alter table plan enable row level security;
 alter table visitor_event_count enable row level security;
 alter table item_type enable row level security;

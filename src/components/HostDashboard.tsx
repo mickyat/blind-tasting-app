@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -17,6 +17,7 @@ import {
   setParticipantJudgeWeight,
   setGroupJudgeWeight,
   deleteEvent,
+  submitFeedback,
 } from '@/app/actions'
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
 import { SHOW_PLAN_LIMIT_BANNERS } from '@/lib/config'
@@ -70,6 +71,7 @@ export default function HostDashboard({
 }: Props) {
   const t = useTranslations('hostDashboard')
   const tRoot = useTranslations()
+  const locale = useLocale()
   const router = useRouter()
   const [textSize, setTextSize] = useTextSize()
   const visibilityLabels: Record<string, string> = {
@@ -267,6 +269,30 @@ export default function HostDashboard({
   }
 
   const totalJudgeWeight = participants.reduce((sum, p) => sum + (p.judge_weight ?? 0), 0)
+
+  const [feedbackMessage, setFeedbackMessage] = useState('')
+  const [feedbackContact, setFeedbackContact] = useState('')
+  const [feedbackSending, setFeedbackSending] = useState(false)
+  const [feedbackSent, setFeedbackSent] = useState(false)
+  const [feedbackError, setFeedbackError] = useState<string | null>(null)
+
+  async function handleSubmitFeedback(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = feedbackMessage.trim()
+    if (!trimmed) return
+    setFeedbackSending(true)
+    setFeedbackError(null)
+    const result = await submitFeedback(hostToken, trimmed, feedbackContact, locale)
+    setFeedbackSending(false)
+    if ('errorKey' in result) {
+      setFeedbackError(tRoot(`errors.${result.errorKey}`))
+      return
+    }
+    setFeedbackMessage('')
+    setFeedbackContact('')
+    setFeedbackSent(true)
+    setTimeout(() => setFeedbackSent(false), 3000)
+  }
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -918,6 +944,40 @@ export default function HostDashboard({
           )}
         </div>
       )}
+
+      <div className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white p-4">
+        <h2 className="text-sm font-medium text-zinc-700">{t('feedback.heading')}</h2>
+        {feedbackSent ? (
+          <p className="rounded-lg bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700">
+            {t('feedback.thanks')}
+          </p>
+        ) : (
+          <form onSubmit={handleSubmitFeedback} className="flex flex-col gap-3">
+            <textarea
+              value={feedbackMessage}
+              onChange={(e) => setFeedbackMessage(e.target.value)}
+              placeholder={t('feedback.messagePlaceholder')}
+              rows={4}
+              required
+              className="resize-none rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
+            />
+            <input
+              value={feedbackContact}
+              onChange={(e) => setFeedbackContact(e.target.value)}
+              placeholder={t('feedback.contactPlaceholder')}
+              className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
+            />
+            {feedbackError && <p className="text-xs text-red-700">{feedbackError}</p>}
+            <button
+              type="submit"
+              disabled={feedbackSending || !feedbackMessage.trim()}
+              className={PRIMARY_BUTTON_CLASS}
+            >
+              {feedbackSending ? t('feedback.sending') : t('feedback.submit')}
+            </button>
+          </form>
+        )}
+      </div>
 
       <div className="flex flex-col gap-3 rounded-xl border-2 border-red-300 bg-red-50 p-4">
         <h2 className="text-sm font-bold text-red-700">{t('dangerZone.heading')}</h2>

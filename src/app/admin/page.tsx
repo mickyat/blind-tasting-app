@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { requireAdminSession } from '@/lib/admin/auth'
 import { getAdminStats } from '@/lib/admin/stats'
+import { getFeedback } from '@/lib/admin/feedback'
+import FeedbackList from '@/components/admin/FeedbackList'
 import { adminLogout } from './actions'
 
 export const metadata: Metadata = {
@@ -48,6 +50,7 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
 export default async function AdminDashboardPage() {
   await requireAdminSession()
   const stats = await getAdminStats()
+  const feedback = await getFeedback()
 
   const maxTrend = Math.max(1, ...stats.dailyTrend.map((d) => d.count))
   const maxTemplate = Math.max(1, ...stats.templateBreakdown.map((t) => t.count))
@@ -136,6 +139,11 @@ export default async function AdminDashboardPage() {
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-xl border border-zinc-300 bg-white p-4">
+        <h2 className="text-sm font-medium text-zinc-700">משוב מארגנים</h2>
+        <FeedbackList initialFeedback={feedback} />
       </div>
     </div>
   )

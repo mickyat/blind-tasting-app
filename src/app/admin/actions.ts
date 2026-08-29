@@ -9,6 +9,7 @@ import {
   createSessionCookieValue,
   verifyPassword,
 } from '@/lib/admin/session'
+import { requireAdminSession } from '@/lib/admin/auth'
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
 const RATE_LIMIT_MAX_ATTEMPTS = 5
@@ -72,4 +73,14 @@ export async function adminLogout() {
   // session cookie (path='/admin') valid and logged in.
   cookieStore.delete({ name: ADMIN_SESSION_COOKIE, path: '/admin' })
   redirect('/admin/login')
+}
+
+// Re-checked here (not just at the page level) since server actions are
+// their own reachable endpoint - requireAdminSession redirects to login on
+// a missing/invalid session, same guard as every protected /admin page.
+export async function deleteFeedback(id: string) {
+  await requireAdminSession()
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('feedback').delete().eq('id', id)
+  return { ok: !error }
 }

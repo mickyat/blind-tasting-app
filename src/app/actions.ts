@@ -702,3 +702,31 @@ export async function setGroupJudgeWeight(hostToken: string, participantIds: str
     participantIds.map((participantId) => ({ participantId, weight: perParticipant }))
   )
 }
+
+// Free-text feedback from the host dashboard -> the `feedback` table, read
+// only from the owner-only /admin panel (src/lib/admin/feedback.ts). No RLS
+// policy allows this insert - it goes through here (service role) instead,
+// same as every other host-dashboard write in this file.
+export async function submitFeedback(hostToken: string, message: string, contact: string, locale: string) {
+  const trimmed = message.trim()
+  if (!trimmed) return err('feedbackMessageRequired')
+
+  const supabase = createAdminClient()
+  const { data: admin } = await supabase
+    .from('event_admin')
+    .select('event_id')
+    .eq('host_token', hostToken)
+    .maybeSingle()
+  if (!admin) return err('invalidHostLink')
+
+  const { data: event } = await supabase.from('event').select('share_token').eq('id', admin.event_id).maybeSingle()
+
+  const { error } = await supabase.from('feedback').insert({
+    event_ref: event?.share_token ?? null,
+    message: trimmed,
+    contact: contact.trim() || null,
+    locale,
+  })
+  if (error) return err('feedbackSubmitFailed')
+  return { ok: true }
+}

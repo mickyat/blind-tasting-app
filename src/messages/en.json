@@ -58,7 +58,9 @@
     "invalidJudgeWeight": "Invalid weight - enter a number between 0 and 100",
     "judgeWeightExceeds100": "The total weight assigned to judges can't exceed 100%",
     "judgeWeightSaveFailed": "Error saving the judge's weight",
-    "deleteEventFailed": "Error deleting the event"
+    "deleteEventFailed": "Error deleting the event",
+    "feedbackMessageRequired": "Please write a message before sending",
+    "feedbackSubmitFailed": "Error sending feedback, please try again"
   },
   "metadata": {
     "title": "TastePanel — Blind Tasting Events",
@@ -665,6 +667,14 @@
       "applying": "Applying…",
       "selectAtLeastOneHint": "Check at least one participant",
       "invalidWeightHint": "Enter a number between 0 and 100"
+    },
+    "feedback": {
+      "heading": "Feedback & suggestions",
+      "messagePlaceholder": "What would you like to tell us? A suggestion, a bug, a general thought...",
+      "contactPlaceholder": "How to reach you (phone/email, optional)",
+      "submit": "Send feedback",
+      "sending": "Sending…",
+      "thanks": "Thanks, got it! 🙏"
     },
     "dangerZone": {
       "heading": "Danger zone",

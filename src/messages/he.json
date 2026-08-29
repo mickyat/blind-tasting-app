@@ -58,7 +58,9 @@
     "invalidJudgeWeight": "משקל לא תקין - יש להזין מספר בין 0 ל-100",
     "judgeWeightExceeds100": "סך כל המשקלים שהוקצו לשופטים לא יכול לעבור 100%",
     "judgeWeightSaveFailed": "שגיאה בשמירת משקל השופט",
-    "deleteEventFailed": "שגיאה במחיקת האירוע"
+    "deleteEventFailed": "שגיאה במחיקת האירוע",
+    "feedbackMessageRequired": "יש לכתוב הודעה לפני השליחה",
+    "feedbackSubmitFailed": "שגיאה בשליחת המשוב, נסה שוב"
   },
   "metadata": {
     "title": "פאנל הטעם — TastePanel",
@@ -665,6 +667,14 @@
       "applying": "מחיל…",
       "selectAtLeastOneHint": "יש לסמן לפחות משתתף אחד",
       "invalidWeightHint": "יש להזין מספר בין 0 ל-100"
+    },
+    "feedback": {
+      "heading": "משוב והצעות",
+      "messagePlaceholder": "מה תרצה לספר לנו? הצעה, באג, מחשבה כללית...",
+      "contactPlaceholder": "דרך חזרה אליך (טלפון/אימייל, לא חובה)",
+      "submit": "שלח משוב",
+      "sending": "שולח…",
+      "thanks": "תודה, קיבלנו! 🙏"
     },
     "dangerZone": {
       "heading": "אזור מסוכן",
