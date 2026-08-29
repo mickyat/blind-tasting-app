@@ -19,7 +19,7 @@ import {
 } from '@/app/actions'
 import { buildAnsweredSet, isItemDone } from '@/lib/results'
 import { SHOW_PLAN_LIMIT_BANNERS } from '@/lib/config'
-import { PRIMARY_BUTTON_CLASS } from '@/lib/ui'
+import { PRIMARY_BUTTON_CLASS, SECONDARY_ACTION_BUTTON_CLASS } from '@/lib/ui'
 import { removeMyEvent } from '@/components/MyEvents'
 import TextSizeControl from '@/components/TextSizeControl'
 import { useTextSize, type TextSize } from '@/lib/textSize'
@@ -82,6 +82,7 @@ export default function HostDashboard({
   const [checklistAnswers, setChecklistAnswers] = useState<ChecklistAnswerRow[]>([])
   const [itemsState, setItemsState] = useState<ItemRow[]>(items)
   const [opening, setOpening] = useState(false)
+  const [justOpenedAll, setJustOpenedAll] = useState(false)
   const [openingItemId, setOpeningItemId] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [reminded, setReminded] = useState<Record<string, boolean>>({})
@@ -326,6 +327,8 @@ export default function HostDashboard({
     setOpening(false)
     if ('ok' in result) {
       setItemsState((prev) => prev.map((i) => ({ ...i, results_open: true })))
+      setJustOpenedAll(true)
+      setTimeout(() => setJustOpenedAll(false), 2500)
     }
   }
 
@@ -451,10 +454,7 @@ export default function HostDashboard({
           <code className="flex-1 overflow-x-auto whitespace-nowrap text-xs text-zinc-700">
             {shareLink}
           </code>
-          <button
-            onClick={() => copy(shareLink, 'share')}
-            className="shrink-0 rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium"
-          >
+          <button onClick={() => copy(shareLink, 'share')} className={`shrink-0 ${SECONDARY_ACTION_BUTTON_CLASS}`}>
             {copied === 'share' ? t('copied') : t('copy')}
           </button>
         </div>
@@ -486,10 +486,7 @@ export default function HostDashboard({
           <code className="flex-1 overflow-x-auto whitespace-nowrap text-xs text-zinc-700">
             {resultsLink}
           </code>
-          <button
-            onClick={() => copy(resultsLink, 'results')}
-            className="shrink-0 rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium"
-          >
+          <button onClick={() => copy(resultsLink, 'results')} className={`shrink-0 ${SECONDARY_ACTION_BUTTON_CLASS}`}>
             {copied === 'results' ? t('copied') : t('copy')}
           </button>
         </div>
@@ -497,7 +494,7 @@ export default function HostDashboard({
           href={`/e/${event.share_token}/results`}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-center text-xs font-semibold text-zinc-700"
+          className={`text-center transition hover:brightness-95 ${PRIMARY_BUTTON_CLASS}`}
         >
           {t('goToResults')}
         </a>
@@ -838,7 +835,7 @@ export default function HostDashboard({
         {event.results_visibility === 'manual' && (
           <>
             <button onClick={handleOpenResults} disabled={opening} className={PRIMARY_BUTTON_CLASS}>
-              {opening ? t('openingAll') : t('openAllResults')}
+              {opening ? t('openingAll') : justOpenedAll ? t('openedAll') : t('openAllResults')}
             </button>
             <div className="flex flex-col gap-2">
               <span className="text-xs font-medium text-zinc-500">{t('perItemPublishHeading')}</span>

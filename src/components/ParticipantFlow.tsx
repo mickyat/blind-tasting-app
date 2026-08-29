@@ -568,6 +568,15 @@ function JoinForm({
     if (!trimmed) return
     setPending(true)
     setError(null)
+
+    const { data: existing } = await supabase.from('participant').select('nickname').eq('event_id', event.id)
+    const taken = (existing ?? []).some((p) => p.nickname.trim().toLowerCase() === trimmed.toLowerCase())
+    if (taken) {
+      setPending(false)
+      setError(t('nameTaken'))
+      return
+    }
+
     const { data, error: insertError } = await supabase
       .from('participant')
       .insert({ event_id: event.id, nickname: trimmed })

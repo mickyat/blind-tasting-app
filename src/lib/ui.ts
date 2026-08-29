@@ -7,3 +7,9 @@
 // matter (4.5:1 text, ~3:1 UI component boundary).
 export const PRIMARY_BUTTON_CLASS =
   'rounded-xl border-2 border-white bg-[#a3e635] px-4 py-4 text-base font-bold text-[#1c1917] shadow-sm disabled:opacity-40'
+
+// Same verified lime accent as PRIMARY_BUTTON_CLASS, sized down for compact
+// inline actions (e.g. a "copy" button sitting next to a code snippet) that
+// still need to read clearly as clickable rather than as plain text.
+export const SECONDARY_ACTION_BUTTON_CLASS =
+  'rounded-lg border-2 border-white bg-[#a3e635] px-3 py-1.5 text-xs font-bold text-[#1c1917] shadow-sm transition hover:brightness-95 disabled:opacity-40'

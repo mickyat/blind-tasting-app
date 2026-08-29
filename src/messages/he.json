@@ -632,6 +632,7 @@
     "visibilityLive": "חי",
     "openingAll": "פותח…",
     "openAllResults": "הצג תוצאות לכל הפריטים",
+    "openedAll": "הוצג בהצלחה ✓",
     "perItemPublishHeading": "פרסום נפרד לכל פריט",
     "published": "פורסם ✓",
     "publishing": "מפרסם…",
@@ -676,7 +677,7 @@
     }
   },
   "organizerOrParticipantLink": {
-    "goToManagement": "את/ה המארגן/ת של האירוע? מעבר לניהול האירוע",
+    "goToManagement": "עבור למסך ניהול האירוע",
     "waitingForResults": "המתן לפרסום התוצאות ע\"י המארגן",
     "startYourOwn": "רוצה לארגן טעימה עיוורת משלך? לחץ כאן"
   },
@@ -708,8 +709,9 @@
       "nicknameLabel": "איך קוראים לך?",
       "nicknamePlaceholder": "שם או כינוי",
       "joinError": "שגיאה בהצטרפות, נסה שוב",
+      "nameTaken": "השם הזה כבר תפוס באירוע הזה, בחר שם אחר",
       "joining": "מצטרף…",
-      "submit": "הצטרף להטעימה"
+      "submit": "התחל לדרג"
     }
   },
   "resultsView": {

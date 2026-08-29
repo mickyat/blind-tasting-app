@@ -632,6 +632,7 @@
     "visibilityLive": "Live",
     "openingAll": "Opening…",
     "openAllResults": "Show results for all items",
+    "openedAll": "Shown successfully ✓",
     "perItemPublishHeading": "Publish items individually",
     "published": "Published ✓",
     "publishing": "Publishing…",
@@ -676,7 +677,7 @@
     }
   },
   "organizerOrParticipantLink": {
-    "goToManagement": "Are you the event organizer? Go to event management",
+    "goToManagement": "Go to event management",
     "waitingForResults": "Wait for the organizer to publish results",
     "startYourOwn": "Want to organize your own blind tasting? Click here"
   },
@@ -708,8 +709,9 @@
       "nicknameLabel": "What's your name?",
       "nicknamePlaceholder": "Name or nickname",
       "joinError": "Error joining, please try again",
+      "nameTaken": "That name is already taken in this event, pick another one",
       "joining": "Joining…",
-      "submit": "Join the tasting"
+      "submit": "Start Rating"
     }
   },
   "resultsView": {

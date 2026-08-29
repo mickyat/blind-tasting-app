@@ -30,7 +30,11 @@ export default function OrganizerOrParticipantLink({ eventId, mutedClass, waitin
 
   if (hostToken) {
     return (
-      <Link href={`/host/${hostToken}`} className={`text-center text-xs underline ${mutedClass}`}>
+      <Link
+        href={`/host/${hostToken}`}
+        className="fixed top-3 end-3 z-30 flex items-center gap-1.5 rounded-full border-2 border-white bg-zinc-900 px-3 py-2 text-xs font-bold text-white shadow-lg transition hover:bg-zinc-800"
+      >
+        <span aria-hidden>⚙️</span>
         {t('goToManagement')}
       </Link>
     )
