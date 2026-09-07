@@ -735,6 +735,59 @@ export async function deleteItemType(hostToken: string, itemTypeId: string) {
   return { ok: true }
 }
 
+async function verifyHostOwnsCategory(
+  supabase: ReturnType<typeof createAdminClient>,
+  hostToken: string,
+  categoryId: string
+) {
+  const { data: admin } = await supabase
+    .from('event_admin')
+    .select('event_id')
+    .eq('host_token', hostToken)
+    .maybeSingle()
+  if (!admin) return err('invalidHostLink')
+
+  const { data: category } = await supabase
+    .from('category')
+    .select('id, item_type_id')
+    .eq('id', categoryId)
+    .maybeSingle()
+  if (!category) return err('categoryNotFound')
+
+  const { data: itemType } = await supabase
+    .from('item_type')
+    .select('event_id')
+    .eq('id', category.item_type_id)
+    .maybeSingle()
+  if (!itemType || itemType.event_id !== admin.event_id) return err('categoryNotInEvent')
+
+  return { ok: true, itemTypeId: category.item_type_id } as const
+}
+
+// Lets the organizer remove a single rating category - a whole group of
+// sub-questions, e.g. "Aroma" - mid-event (e.g. a criterion that turned out
+// to be unratable for this tasting, or was set up by mistake), without
+// touching the item type itself. Hard delete - on delete cascade takes
+// care of its parameters (see supabase/schema.sql). Blocks removing an
+// item type's last remaining category, mirroring deleteItem/deleteItemType's
+// own last-one guards - an item type with zero categories would have
+// nothing left to score under it.
+export async function deleteCategory(hostToken: string, categoryId: string) {
+  const supabase = createAdminClient()
+  const ownership = await verifyHostOwnsCategory(supabase, hostToken, categoryId)
+  if ('errorKey' in ownership) return ownership
+
+  const { count } = await supabase
+    .from('category')
+    .select('id', { count: 'exact', head: true })
+    .eq('item_type_id', ownership.itemTypeId)
+  if ((count ?? 0) <= 1) return err('cannotDeleteLastCategory')
+
+  const { error } = await supabase.from('category').delete().eq('id', categoryId)
+  if (error) return err('deleteCategoryFailed')
+  return { ok: true }
+}
+
 // Shared by setParticipantJudgeWeight (one judge, its own weight) and
 // setGroupJudgeWeight (several judges, one shared weight already divided
 // evenly by the caller) - both just resolve to "these participants get
