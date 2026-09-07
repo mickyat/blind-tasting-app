@@ -207,13 +207,18 @@ export default function CreateEventForm() {
   const [itemTypes, setItemTypes] = useState<ItemTypeDraft[]>([emptyItemType()])
   const [visibility, setVisibility] = useState<ResultsVisibility>('manual')
   const [revealMode, setRevealMode] = useState<ResultsRevealMode>('all')
-  // Defaults ON: a blind tasting should stay blind unless the organizer
-  // deliberately opts out, not the other way around. (Was `false` - an
-  // organizer who never touched this checkbox got identity revealed from
-  // the start, with no way to fix it once the event was already shared;
-  // see updateEventSettings in src/app/actions.ts for the post-creation
-  // fix, added alongside this default flip.)
-  const [hideItemIdentity, setHideItemIdentity] = useState(true)
+  // Unchecked by default: a blind tasting should stay blind unless the
+  // organizer deliberately opts in to revealing identity early, not the
+  // other way around. This tracks "reveal", the inverse of the
+  // `hide_item_identity` DB column - inverted at the point it's sent to
+  // createEvent below - because a checkbox that must stay OFF to get the
+  // (now default) blind behavior reads backwards to an organizer scanning
+  // the form. (Previously this was a `hideItemIdentity` flag defaulting to
+  // `false` - an organizer who never touched this checkbox got identity
+  // revealed from the start, with no way to fix it once the event was
+  // already shared; see updateEventSettings in src/app/actions.ts for the
+  // post-creation fix, added alongside this default flip.)
+  const [revealItemIdentity, setRevealItemIdentity] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)
@@ -510,7 +515,7 @@ export default function CreateEventForm() {
         title,
         resultsVisibility: visibility,
         resultsRevealMode: revealMode,
-        hideItemIdentity,
+        hideItemIdentity: !revealItemIdentity,
         theme,
         logoUrl,
         prizeDescription: prizeDescription.trim() || null,
@@ -842,9 +847,9 @@ export default function CreateEventForm() {
                       />
                     </div>
                   </div>
-                  {hideItemIdentity && (
+                  {!revealItemIdentity && (
                     <label className="flex flex-col gap-1 pr-1 text-xs text-zinc-500">
-                      {t('hideIdentity.blindLabelCaption')}
+                      {t('revealIdentity.blindLabelCaption')}
                       <input
                         value={item.blindLabel}
                         onChange={(e) => updateItemTypeItem(ti, i, { blindLabel: e.target.value })}
@@ -1340,13 +1345,13 @@ export default function CreateEventForm() {
         <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-zinc-700">
           <input
             type="checkbox"
-            checked={hideItemIdentity}
-            onChange={(e) => setHideItemIdentity(e.target.checked)}
+            checked={revealItemIdentity}
+            onChange={(e) => setRevealItemIdentity(e.target.checked)}
             className="mt-0.5"
           />
-          {t('hideIdentity.label')}
+          {t('revealIdentity.label')}
         </label>
-        <p className="text-xs text-zinc-400">{t('hideIdentity.hint')}</p>
+        <p className="text-xs text-zinc-400">{t('revealIdentity.hint')}</p>
       </section>
 
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}

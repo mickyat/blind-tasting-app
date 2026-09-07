@@ -17,6 +17,7 @@ import {
   updateEventSettings,
   deleteItem,
   deleteItemType,
+  deleteCategory,
   setParticipantJudgeWeight,
   setGroupJudgeWeight,
   deleteEvent,
@@ -91,29 +92,36 @@ export default function HostDashboard({
   const [checklistAnswers, setChecklistAnswers] = useState<ChecklistAnswerRow[]>([])
   const [itemsState, setItemsState] = useState<ItemRow[]>(items)
   const [itemTypesState, setItemTypesState] = useState<ItemTypeRow[]>(itemTypes)
+  const [categoriesState, setCategoriesState] = useState<CategoryRow[]>(categories)
 
   // Event settings editable after creation (currently just
   // hide_item_identity - see updateEventSettings in src/app/actions.ts for
   // why this needed to exist at all: previously the create-event form was
   // the only place this could be set, with no way back once the event was
-  // already shared).
-  const [hideItemIdentity, setHideItemIdentity] = useState(event.hide_item_identity)
+  // already shared). Tracked here as "reveal" (the inverse of the DB
+  // column) to match the checkbox in CreateEventForm - see its comment for
+  // why the UI is framed as an opt-in reveal rather than an opt-in hide.
+  const [revealItemIdentity, setRevealItemIdentity] = useState(!event.hide_item_identity)
   const [savingIdentitySetting, setSavingIdentitySetting] = useState(false)
 
-  async function handleToggleHideItemIdentity(checked: boolean) {
-    setHideItemIdentity(checked)
+  async function handleToggleRevealItemIdentity(checked: boolean) {
+    setRevealItemIdentity(checked)
     setSavingIdentitySetting(true)
-    await updateEventSettings(hostToken, checked)
+    await updateEventSettings(hostToken, !checked)
     setSavingIdentitySetting(false)
   }
 
-  // Mid-event removal of an item or a whole item type (e.g. an item nobody
-  // could actually identify, or a whole tasting category that fell
-  // through) - see deleteItem/deleteItemType in src/app/actions.ts. One
-  // shared confirm dialog for both, distinguished by `kind`.
-  const [confirmDelete, setConfirmDelete] = useState<{ kind: 'item' | 'itemType'; id: string; name: string } | null>(
-    null
-  )
+  // Mid-event removal of an item, a whole item type, or a single rating
+  // category (e.g. an item nobody could actually identify, a whole tasting
+  // category that fell through, or a scoring category/sub-question that
+  // turned out to be unratable) - see deleteItem/deleteItemType/
+  // deleteCategory in src/app/actions.ts. One shared confirm dialog for all
+  // three, distinguished by `kind`.
+  const [confirmDelete, setConfirmDelete] = useState<{
+    kind: 'item' | 'itemType' | 'category'
+    id: string
+    name: string
+  } | null>(null)
   const [deletingTarget, setDeletingTarget] = useState(false)
   const [deleteTargetError, setDeleteTargetError] = useState<string | null>(null)
 
@@ -124,7 +132,9 @@ export default function HostDashboard({
     const result =
       confirmDelete.kind === 'item'
         ? await deleteItem(hostToken, confirmDelete.id)
-        : await deleteItemType(hostToken, confirmDelete.id)
+        : confirmDelete.kind === 'itemType'
+          ? await deleteItemType(hostToken, confirmDelete.id)
+          : await deleteCategory(hostToken, confirmDelete.id)
     setDeletingTarget(false)
     if ('errorKey' in result) {
       setDeleteTargetError(tRoot(`errors.${result.errorKey}`, result.errorParams))
@@ -132,9 +142,12 @@ export default function HostDashboard({
     }
     if (confirmDelete.kind === 'item') {
       setItemsState((prev) => prev.filter((i) => i.id !== confirmDelete.id))
-    } else {
+    } else if (confirmDelete.kind === 'itemType') {
       setItemTypesState((prev) => prev.filter((it) => it.id !== confirmDelete.id))
       setItemsState((prev) => prev.filter((i) => i.item_type_id !== confirmDelete.id))
+      setCategoriesState((prev) => prev.filter((c) => c.item_type_id !== confirmDelete.id))
+    } else {
+      setCategoriesState((prev) => prev.filter((c) => c.id !== confirmDelete.id))
     }
     setConfirmDelete(null)
   }
@@ -606,14 +619,14 @@ export default function HostDashboard({
         <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-zinc-700">
           <input
             type="checkbox"
-            checked={hideItemIdentity}
-            onChange={(e) => handleToggleHideItemIdentity(e.target.checked)}
+            checked={revealItemIdentity}
+            onChange={(e) => handleToggleRevealItemIdentity(e.target.checked)}
             className="mt-0.5"
           />
-          {tRoot('createEventForm.hideIdentity.label')}
+          {tRoot('createEventForm.revealIdentity.label')}
         </label>
         <p className="text-xs text-zinc-400">
-          {tRoot('createEventForm.hideIdentity.hint')}
+          {tRoot('createEventForm.revealIdentity.hint')}
           {savingIdentitySetting && ` — ${t('saving')}`}
         </p>
       </div>
@@ -801,6 +814,27 @@ export default function HostDashboard({
                   {t('deleteItemTypeButton')}
                 </button>
               </div>
+              {(() => {
+                const typeCategories = categoriesState.filter((c) => c.item_type_id === itemType.id)
+                if (typeCategories.length === 0) return null
+                return (
+                  <div className="flex flex-col gap-1.5 rounded-lg bg-zinc-50 p-2">
+                    <span className="text-xs font-medium text-zinc-500">{t('ratingCategoriesHeading')}</span>
+                    {typeCategories.map((category) => (
+                      <div key={category.id} className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-zinc-700">{category.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDelete({ kind: 'category', id: category.id, name: category.name })}
+                          className="shrink-0 rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium text-red-600"
+                        >
+                          {t('deleteCategoryButton')}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
               {typeItems.map((item) => (
                 <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-3">
                   <div className="flex items-center justify-between gap-2">
@@ -1136,10 +1170,16 @@ export default function HostDashboard({
             <h3 className="text-base font-bold text-red-700">
               {confirmDelete.kind === 'item'
                 ? t('deleteItemConfirmTitle', { name: confirmDelete.name })
-                : t('deleteItemTypeConfirmTitle', { name: confirmDelete.name })}
+                : confirmDelete.kind === 'itemType'
+                  ? t('deleteItemTypeConfirmTitle', { name: confirmDelete.name })
+                  : t('deleteCategoryConfirmTitle', { name: confirmDelete.name })}
             </h3>
             <p className="text-sm text-zinc-600">
-              {confirmDelete.kind === 'item' ? t('deleteItemConfirmBody') : t('deleteItemTypeConfirmBody')}
+              {confirmDelete.kind === 'item'
+                ? t('deleteItemConfirmBody')
+                : confirmDelete.kind === 'itemType'
+                  ? t('deleteItemTypeConfirmBody')
+                  : t('deleteCategoryConfirmBody')}
             </p>
             {deleteTargetError && <p className="text-xs text-red-700">{deleteTargetError}</p>}
             <div className="flex gap-2">

@@ -66,7 +66,11 @@
     "cannotDeleteLastItem": "Can't delete the last item in a category - delete the whole category instead",
     "itemTypeNotInEvent": "This category doesn't belong to this event",
     "deleteItemTypeFailed": "Error deleting the category",
-    "cannotDeleteLastItemType": "Can't delete the only remaining category - delete the whole event instead"
+    "cannotDeleteLastItemType": "Can't delete the only remaining category - delete the whole event instead",
+    "categoryNotFound": "Rating group not found",
+    "categoryNotInEvent": "This rating group doesn't belong to this event",
+    "deleteCategoryFailed": "Error deleting the rating group",
+    "cannotDeleteLastCategory": "Can't delete the only remaining rating group in this category - delete the whole category instead"
   },
   "metadata": {
     "title": "TastePanel — Blind Tasting Events",
@@ -185,9 +189,9 @@
       "manual": "Manual selection",
       "manualHint": "Once there's scoring, you'll be able to pick exactly which items appear in results from the dashboard"
     },
-    "hideIdentity": {
-      "label": "Hide item identity (name, photo, description) until revealed",
-      "hint": "Participants will see a temporary label like \"Item 1\" instead of the real name, until you reveal it - just like you already control when scores are revealed",
+    "revealIdentity": {
+      "label": "Reveal item identity (name, photo, description) in advance, before voting",
+      "hint": "By default item identity is hidden (blind tasting) - participants will see a temporary label like \"Item 1\" instead of the real name. Check this only if you want the identity shown to them in advance, before voting",
       "blindLabelCaption": "Temporary label until revealed (optional - default: Item 1, Item 2...)"
     },
     "unexpectedError": "Unexpected error, please try again",
@@ -634,6 +638,10 @@
     "deleteItemTypeButton": "Delete this category",
     "deleteItemTypeConfirmTitle": "Delete the category \"{name}\"?",
     "deleteItemTypeConfirmBody": "This is permanent and will delete every item, question, and score under this category.",
+    "ratingCategoriesHeading": "Rating groups:",
+    "deleteCategoryButton": "Delete group",
+    "deleteCategoryConfirmTitle": "Delete the rating group \"{name}\"?",
+    "deleteCategoryConfirmBody": "This is permanent and will delete every question and score under this rating group.",
     "removePhoto": "Remove photo",
     "addPhoto": "Add photo",
     "changePhoto": "Change photo",
