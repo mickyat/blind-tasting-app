@@ -620,6 +620,31 @@ export async function deleteEvent(hostToken: string) {
   return { ok: true }
 }
 
+// Lets the organizer flip event-level settings from the host dashboard
+// AFTER the event was already created and shared - previously the only
+// place hide_item_identity could be set was the one-time create-event
+// form, with no way back if the organizer got it wrong (e.g. accidentally
+// leaving identity revealed for what was meant to be a blind tasting,
+// discovered only once the event was already underway). Currently just
+// hide_item_identity; add more fields here as more post-creation settings
+// need editing rather than adding a parallel action per field.
+export async function updateEventSettings(hostToken: string, hideItemIdentity: boolean) {
+  const supabase = createAdminClient()
+  const { data: admin } = await supabase
+    .from('event_admin')
+    .select('event_id')
+    .eq('host_token', hostToken)
+    .maybeSingle()
+  if (!admin) return err('invalidHostLink')
+
+  const { error } = await supabase
+    .from('event')
+    .update({ hide_item_identity: hideItemIdentity })
+    .eq('id', admin.event_id)
+  if (error) return err('eventSettingsSaveFailed')
+  return { ok: true }
+}
+
 export async function updateItemVisibility(hostToken: string, itemId: string, includeInResults: boolean) {
   const supabase = createAdminClient()
   const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)
@@ -630,6 +655,83 @@ export async function updateItemVisibility(hostToken: string, itemId: string, in
     .update({ include_in_results: includeInResults })
     .eq('id', itemId)
   if (error) return err('visibilitySaveFailed')
+  return { ok: true }
+}
+
+// Lets the organizer remove a single item mid-event (e.g. a mystery item
+// nobody could actually identify enough to score, discovered only once
+// tasting was already underway) without deleting the whole event. Hard
+// delete - on delete cascade takes care of that item's score/
+// checklist_answer/item_external_value rows (see supabase/schema.sql).
+// Blocks removing the last item of an item type instead of silently
+// leaving that type empty (nothing left to rate under it, but the type
+// itself - and its categories/parameters - would still exist and confuse
+// both the dashboard and any participant screen already open on it);
+// deleting the whole item type is the deliberate action for that.
+export async function deleteItem(hostToken: string, itemId: string) {
+  const supabase = createAdminClient()
+  const ownership = await verifyHostOwnsItem(supabase, hostToken, itemId)
+  if ('errorKey' in ownership) return ownership
+
+  const { data: item } = await supabase.from('item').select('item_type_id').eq('id', itemId).maybeSingle()
+  if (!item) return err('itemNotFound')
+
+  const { count } = await supabase
+    .from('item')
+    .select('id', { count: 'exact', head: true })
+    .eq('item_type_id', item.item_type_id)
+  if ((count ?? 0) <= 1) return err('cannotDeleteLastItem')
+
+  const { error } = await supabase.from('item').delete().eq('id', itemId)
+  if (error) return err('deleteItemFailed')
+  return { ok: true }
+}
+
+async function verifyHostOwnsItemType(
+  supabase: ReturnType<typeof createAdminClient>,
+  hostToken: string,
+  itemTypeId: string
+) {
+  const { data: admin } = await supabase
+    .from('event_admin')
+    .select('event_id')
+    .eq('host_token', hostToken)
+    .maybeSingle()
+  if (!admin) return err('invalidHostLink')
+
+  const { data: itemType } = await supabase
+    .from('item_type')
+    .select('id, event_id')
+    .eq('id', itemTypeId)
+    .maybeSingle()
+  if (!itemType || itemType.event_id !== admin.event_id) return err('itemTypeNotInEvent')
+
+  return { ok: true, eventId: admin.event_id } as const
+}
+
+// Lets the organizer remove an entire item type (e.g. a whole tasting
+// category that fell through, like the cheese course that never showed
+// up) mid-event - not just individual items under it. Hard delete - on
+// delete cascade takes care of its items (and each item's score/
+// checklist_answer/item_external_value), categories (and their
+// parameters), and external_criterion rows (see supabase/schema.sql).
+// Blocks removing the event's last remaining item type, mirroring
+// createEvent's atLeastOneItemType validation - an event with zero item
+// types would have nothing left to show participants; deleting the whole
+// event is the deliberate action for that.
+export async function deleteItemType(hostToken: string, itemTypeId: string) {
+  const supabase = createAdminClient()
+  const ownership = await verifyHostOwnsItemType(supabase, hostToken, itemTypeId)
+  if ('errorKey' in ownership) return ownership
+
+  const { count } = await supabase
+    .from('item_type')
+    .select('id', { count: 'exact', head: true })
+    .eq('event_id', ownership.eventId)
+  if ((count ?? 0) <= 1) return err('cannotDeleteLastItemType')
+
+  const { error } = await supabase.from('item_type').delete().eq('id', itemTypeId)
+  if (error) return err('deleteItemTypeFailed')
   return { ok: true }
 }
 

@@ -60,7 +60,13 @@
     "judgeWeightSaveFailed": "שגיאה בשמירת משקל השופט",
     "deleteEventFailed": "שגיאה במחיקת האירוע",
     "feedbackMessageRequired": "יש לכתוב הודעה לפני השליחה",
-    "feedbackSubmitFailed": "שגיאה בשליחת המשוב, נסה שוב"
+    "feedbackSubmitFailed": "שגיאה בשליחת המשוב, נסה שוב",
+    "eventSettingsSaveFailed": "שגיאה בשמירת ההגדרה",
+    "deleteItemFailed": "שגיאה במחיקת הפריט",
+    "cannotDeleteLastItem": "אי אפשר למחוק את הפריט האחרון בסיווג - מחק את כל הסיווג במקום",
+    "itemTypeNotInEvent": "הסיווג לא שייך לאירוע הזה",
+    "deleteItemTypeFailed": "שגיאה במחיקת הסיווג",
+    "cannotDeleteLastItemType": "אי אפשר למחוק את הסיווג היחיד שנשאר - מחק את כל האירוע במקום"
   },
   "metadata": {
     "title": "פאנל הטעם — TastePanel",
@@ -618,7 +624,16 @@
     "reminderSent": "נשלח!",
     "sendReminder": "שלח תזכורת",
     "missing": "חסר: {items}",
+    "eventSettings": {
+      "heading": "הגדרות אירוע"
+    },
     "itemMediaHeading": "תמונה/תיאור לכל פריט (מוצג בתוצאות במקום \"פריט מספר X\")",
+    "deleteItemButton": "מחק פריט",
+    "deleteItemConfirmTitle": "למחוק את \"{name}\"?",
+    "deleteItemConfirmBody": "הפעולה בלתי הפיכה ותמחק לצמיתות את הפריט וכל הציונים שכבר ניתנו לו.",
+    "deleteItemTypeButton": "מחק סיווג זה",
+    "deleteItemTypeConfirmTitle": "למחוק את הסיווג \"{name}\"?",
+    "deleteItemTypeConfirmBody": "הפעולה בלתי הפיכה ותמחק לצמיתות את כל הפריטים, השאלות והציונים תחת הסיווג הזה.",
     "removePhoto": "הסר תמונה",
     "addPhoto": "הוסף תמונה",
     "changePhoto": "שנה תמונה",

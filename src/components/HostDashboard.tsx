@@ -14,6 +14,9 @@ import {
   removeItemPhoto,
   updateItemLabel,
   updateItemVisibility,
+  updateEventSettings,
+  deleteItem,
+  deleteItemType,
   setParticipantJudgeWeight,
   setGroupJudgeWeight,
   deleteEvent,
@@ -32,6 +35,7 @@ import type {
   ExternalCriterionRow,
   ItemExternalValueRow,
   ItemRow,
+  ItemTypeRow,
   ParameterRow,
   ParticipantRow,
   ScoreRow,
@@ -51,6 +55,7 @@ const ZOOM_FACTOR: Record<TextSize, number> = { normal: 1, large: 1.15, xlarge: 
 interface Props {
   hostToken: string
   event: EventRow
+  itemTypes: ItemTypeRow[]
   items: ItemRow[]
   categories: CategoryRow[]
   parameters: ParameterRow[]
@@ -62,6 +67,7 @@ interface Props {
 export default function HostDashboard({
   hostToken,
   event,
+  itemTypes,
   items,
   categories,
   parameters,
@@ -84,6 +90,54 @@ export default function HostDashboard({
   const [scores, setScores] = useState<ScoreRow[]>([])
   const [checklistAnswers, setChecklistAnswers] = useState<ChecklistAnswerRow[]>([])
   const [itemsState, setItemsState] = useState<ItemRow[]>(items)
+  const [itemTypesState, setItemTypesState] = useState<ItemTypeRow[]>(itemTypes)
+
+  // Event settings editable after creation (currently just
+  // hide_item_identity - see updateEventSettings in src/app/actions.ts for
+  // why this needed to exist at all: previously the create-event form was
+  // the only place this could be set, with no way back once the event was
+  // already shared).
+  const [hideItemIdentity, setHideItemIdentity] = useState(event.hide_item_identity)
+  const [savingIdentitySetting, setSavingIdentitySetting] = useState(false)
+
+  async function handleToggleHideItemIdentity(checked: boolean) {
+    setHideItemIdentity(checked)
+    setSavingIdentitySetting(true)
+    await updateEventSettings(hostToken, checked)
+    setSavingIdentitySetting(false)
+  }
+
+  // Mid-event removal of an item or a whole item type (e.g. an item nobody
+  // could actually identify, or a whole tasting category that fell
+  // through) - see deleteItem/deleteItemType in src/app/actions.ts. One
+  // shared confirm dialog for both, distinguished by `kind`.
+  const [confirmDelete, setConfirmDelete] = useState<{ kind: 'item' | 'itemType'; id: string; name: string } | null>(
+    null
+  )
+  const [deletingTarget, setDeletingTarget] = useState(false)
+  const [deleteTargetError, setDeleteTargetError] = useState<string | null>(null)
+
+  async function handleConfirmDeleteTarget() {
+    if (!confirmDelete) return
+    setDeletingTarget(true)
+    setDeleteTargetError(null)
+    const result =
+      confirmDelete.kind === 'item'
+        ? await deleteItem(hostToken, confirmDelete.id)
+        : await deleteItemType(hostToken, confirmDelete.id)
+    setDeletingTarget(false)
+    if ('errorKey' in result) {
+      setDeleteTargetError(tRoot(`errors.${result.errorKey}`, result.errorParams))
+      return
+    }
+    if (confirmDelete.kind === 'item') {
+      setItemsState((prev) => prev.filter((i) => i.id !== confirmDelete.id))
+    } else {
+      setItemTypesState((prev) => prev.filter((it) => it.id !== confirmDelete.id))
+      setItemsState((prev) => prev.filter((i) => i.item_type_id !== confirmDelete.id))
+    }
+    setConfirmDelete(null)
+  }
   // Backfills this browser's host_token->event link if it's missing (e.g. a
   // bookmarked host link, or storage cleared after creation) - without it,
   // OrganizerOrParticipantLink on the rating screen (the "back to
@@ -547,6 +601,23 @@ export default function HostDashboard({
         </a>
       </div>
 
+      <div className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-4">
+        <h2 className="text-sm font-medium text-zinc-700">{t('eventSettings.heading')}</h2>
+        <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-zinc-700">
+          <input
+            type="checkbox"
+            checked={hideItemIdentity}
+            onChange={(e) => handleToggleHideItemIdentity(e.target.checked)}
+            className="mt-0.5"
+          />
+          {tRoot('createEventForm.hideIdentity.label')}
+        </label>
+        <p className="text-xs text-zinc-400">
+          {tRoot('createEventForm.hideIdentity.hint')}
+          {savingIdentitySetting && ` — ${t('saving')}`}
+        </p>
+      </div>
+
       <div className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-zinc-700">
           {t('participantsHeading', { count: participants.length })}
@@ -714,109 +785,135 @@ export default function HostDashboard({
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         <h2 className="text-sm font-medium text-zinc-700">{t('itemMediaHeading')}</h2>
-        {itemsState.map((item) => (
-          <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-3">
-            <span className="text-sm font-medium text-zinc-800">{item.label}</span>
-            <div className="flex items-center gap-3">
-              {item.image_url && (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.image_url}
-                    alt=""
-                    className="h-14 w-14 rounded-lg border border-zinc-300 object-cover bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePhoto(item.id)}
-                    disabled={photoUploading[item.id]}
-                    className="rounded-lg border border-zinc-300 px-2 py-1.5 text-xs font-medium text-zinc-600 disabled:opacity-50"
-                  >
-                    {t('removePhoto')}
-                  </button>
-                </>
-              )}
-              <div className="relative">
+        {itemTypesState.map((itemType) => {
+          const typeItems = itemsState.filter((i) => i.item_type_id === itemType.id)
+          return (
+            <div key={itemType.id} className="flex flex-col gap-3 rounded-xl border border-zinc-200 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-zinc-800">{itemType.name}</span>
                 <button
                   type="button"
-                  onClick={() => setPhotoMenuOpenFor((prev) => (prev === item.id ? null : item.id))}
-                  disabled={photoUploading[item.id]}
-                  className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 disabled:opacity-50"
+                  onClick={() => setConfirmDelete({ kind: 'itemType', id: itemType.id, name: itemType.name })}
+                  className="shrink-0 rounded-lg border border-red-300 px-2 py-1 text-xs font-medium text-red-600"
                 >
-                  {item.image_url ? t('changePhoto') : t('addPhoto')}
+                  {t('deleteItemTypeButton')}
                 </button>
-                {photoMenuOpenFor === item.id && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setPhotoMenuOpenFor(null)} />
-                    <div className="absolute z-20 mt-1 flex flex-col overflow-hidden rounded-lg border border-zinc-300 bg-white shadow-lg">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          cameraInputRefs.current[item.id]?.click()
-                          setPhotoMenuOpenFor(null)
-                        }}
-                        className="whitespace-nowrap px-3 py-2 text-start text-xs text-zinc-700 hover:bg-zinc-50"
-                      >
-                        {t('takePhoto')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          galleryInputRefs.current[item.id]?.click()
-                          setPhotoMenuOpenFor(null)
-                        }}
-                        className="whitespace-nowrap border-t border-zinc-200 px-3 py-2 text-start text-xs text-zinc-700 hover:bg-zinc-50"
-                      >
-                        {t('chooseFromGallery')}
-                      </button>
-                    </div>
-                  </>
-                )}
-                {/* Two hidden inputs, not one - neither `capture` alone
-                    (camera only, no gallery on some Android builds) nor
-                    omitting it (no camera at all on some Android builds)
-                    works reliably everywhere; see comment above the state. */}
-                <input
-                  ref={(el) => {
-                    cameraInputRefs.current[item.id] = el
-                  }}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(e) => handlePhotoChange(item.id, e)}
-                  disabled={photoUploading[item.id]}
-                  className="hidden"
-                />
-                <input
-                  ref={(el) => {
-                    galleryInputRefs.current[item.id] = el
-                  }}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  onChange={(e) => handlePhotoChange(item.id, e)}
-                  disabled={photoUploading[item.id]}
-                  className="hidden"
-                />
               </div>
-              {photoUploading[item.id] && <span className="text-xs text-zinc-400">{t('uploadingPhoto')}</span>}
+              {typeItems.map((item) => (
+                <div key={item.id} className="flex flex-col gap-2 rounded-xl border border-zinc-300 bg-white p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-zinc-800">{item.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete({ kind: 'item', id: item.id, name: item.label })}
+                      className="shrink-0 rounded-lg border border-red-300 px-2 py-1 text-xs font-medium text-red-600"
+                    >
+                      {t('deleteItemButton')}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {item.image_url && (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.image_url}
+                          alt=""
+                          className="h-14 w-14 rounded-lg border border-zinc-300 object-cover bg-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(item.id)}
+                          disabled={photoUploading[item.id]}
+                          className="rounded-lg border border-zinc-300 px-2 py-1.5 text-xs font-medium text-zinc-600 disabled:opacity-50"
+                        >
+                          {t('removePhoto')}
+                        </button>
+                      </>
+                    )}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setPhotoMenuOpenFor((prev) => (prev === item.id ? null : item.id))}
+                        disabled={photoUploading[item.id]}
+                        className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 disabled:opacity-50"
+                      >
+                        {item.image_url ? t('changePhoto') : t('addPhoto')}
+                      </button>
+                      {photoMenuOpenFor === item.id && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setPhotoMenuOpenFor(null)} />
+                          <div className="absolute z-20 mt-1 flex flex-col overflow-hidden rounded-lg border border-zinc-300 bg-white shadow-lg">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                cameraInputRefs.current[item.id]?.click()
+                                setPhotoMenuOpenFor(null)
+                              }}
+                              className="whitespace-nowrap px-3 py-2 text-start text-xs text-zinc-700 hover:bg-zinc-50"
+                            >
+                              {t('takePhoto')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                galleryInputRefs.current[item.id]?.click()
+                                setPhotoMenuOpenFor(null)
+                              }}
+                              className="whitespace-nowrap border-t border-zinc-200 px-3 py-2 text-start text-xs text-zinc-700 hover:bg-zinc-50"
+                            >
+                              {t('chooseFromGallery')}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                      {/* Two hidden inputs, not one - neither `capture` alone
+                          (camera only, no gallery on some Android builds) nor
+                          omitting it (no camera at all on some Android builds)
+                          works reliably everywhere; see comment above the state. */}
+                      <input
+                        ref={(el) => {
+                          cameraInputRefs.current[item.id] = el
+                        }}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => handlePhotoChange(item.id, e)}
+                        disabled={photoUploading[item.id]}
+                        className="hidden"
+                      />
+                      <input
+                        ref={(el) => {
+                          galleryInputRefs.current[item.id] = el
+                        }}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={(e) => handlePhotoChange(item.id, e)}
+                        disabled={photoUploading[item.id]}
+                        className="hidden"
+                      />
+                    </div>
+                    {photoUploading[item.id] && <span className="text-xs text-zinc-400">{t('uploadingPhoto')}</span>}
+                  </div>
+                  {photoError[item.id] && <p className="text-xs text-red-600">{photoError[item.id]}</p>}
+                  <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                    <span className="flex items-center gap-1">
+                      {t('customLabelCaption')}
+                      {labelSaving[item.id] && <span className="text-zinc-400">{t('saving')}</span>}
+                    </span>
+                    <input
+                      value={labelState[item.id] ?? ''}
+                      onChange={(e) => setLabelState((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                      onBlur={(e) => saveLabel(item.id, e.target.value)}
+                      className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                </div>
+              ))}
             </div>
-            {photoError[item.id] && <p className="text-xs text-red-600">{photoError[item.id]}</p>}
-            <label className="flex flex-col gap-1 text-xs text-zinc-500">
-              <span className="flex items-center gap-1">
-                {t('customLabelCaption')}
-                {labelSaving[item.id] && <span className="text-zinc-400">{t('saving')}</span>}
-              </span>
-              <input
-                value={labelState[item.id] ?? ''}
-                onChange={(e) => setLabelState((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                onBlur={(e) => saveLabel(item.id, e.target.value)}
-                className="w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm"
-              />
-            </label>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {externalCriteria.length > 0 && (
@@ -1021,6 +1118,46 @@ export default function HostDashboard({
                 className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
               >
                 {deleting ? t('dangerZone.deleting') : t('dangerZone.confirmDelete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => !deletingTarget && setConfirmDelete(null)}
+        >
+          <div
+            className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border-2 border-red-400 bg-white p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-red-700">
+              {confirmDelete.kind === 'item'
+                ? t('deleteItemConfirmTitle', { name: confirmDelete.name })
+                : t('deleteItemTypeConfirmTitle', { name: confirmDelete.name })}
+            </h3>
+            <p className="text-sm text-zinc-600">
+              {confirmDelete.kind === 'item' ? t('deleteItemConfirmBody') : t('deleteItemTypeConfirmBody')}
+            </p>
+            {deleteTargetError && <p className="text-xs text-red-700">{deleteTargetError}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(null)}
+                disabled={deletingTarget}
+                className="flex-1 rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50"
+              >
+                {t('dangerZone.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteTarget}
+                disabled={deletingTarget}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {deletingTarget ? t('dangerZone.deleting') : t('dangerZone.confirmDelete')}
               </button>
             </div>
           </div>

@@ -207,7 +207,13 @@ export default function CreateEventForm() {
   const [itemTypes, setItemTypes] = useState<ItemTypeDraft[]>([emptyItemType()])
   const [visibility, setVisibility] = useState<ResultsVisibility>('manual')
   const [revealMode, setRevealMode] = useState<ResultsRevealMode>('all')
-  const [hideItemIdentity, setHideItemIdentity] = useState(false)
+  // Defaults ON: a blind tasting should stay blind unless the organizer
+  // deliberately opts out, not the other way around. (Was `false` - an
+  // organizer who never touched this checkbox got identity revealed from
+  // the start, with no way to fix it once the event was already shared;
+  // see updateEventSettings in src/app/actions.ts for the post-creation
+  // fix, added alongside this default flip.)
+  const [hideItemIdentity, setHideItemIdentity] = useState(true)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)

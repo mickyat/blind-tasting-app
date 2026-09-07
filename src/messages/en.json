@@ -60,7 +60,13 @@
     "judgeWeightSaveFailed": "Error saving the judge's weight",
     "deleteEventFailed": "Error deleting the event",
     "feedbackMessageRequired": "Please write a message before sending",
-    "feedbackSubmitFailed": "Error sending feedback, please try again"
+    "feedbackSubmitFailed": "Error sending feedback, please try again",
+    "eventSettingsSaveFailed": "Error saving the setting",
+    "deleteItemFailed": "Error deleting the item",
+    "cannotDeleteLastItem": "Can't delete the last item in a category - delete the whole category instead",
+    "itemTypeNotInEvent": "This category doesn't belong to this event",
+    "deleteItemTypeFailed": "Error deleting the category",
+    "cannotDeleteLastItemType": "Can't delete the only remaining category - delete the whole event instead"
   },
   "metadata": {
     "title": "TastePanel — Blind Tasting Events",
@@ -618,7 +624,16 @@
     "reminderSent": "Sent!",
     "sendReminder": "Send reminder",
     "missing": "Missing: {items}",
+    "eventSettings": {
+      "heading": "Event settings"
+    },
     "itemMediaHeading": "Photo/description per item (shown in results instead of \"Item number X\")",
+    "deleteItemButton": "Delete item",
+    "deleteItemConfirmTitle": "Delete \"{name}\"?",
+    "deleteItemConfirmBody": "This is permanent and will delete the item and every score already given to it.",
+    "deleteItemTypeButton": "Delete this category",
+    "deleteItemTypeConfirmTitle": "Delete the category \"{name}\"?",
+    "deleteItemTypeConfirmBody": "This is permanent and will delete every item, question, and score under this category.",
     "removePhoto": "Remove photo",
     "addPhoto": "Add photo",
     "changePhoto": "Change photo",
