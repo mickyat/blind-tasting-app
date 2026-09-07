@@ -79,6 +79,7 @@ export default async function HostPage(props: PageProps<'/host/[hostToken]'>) {
       <HostDashboard
         hostToken={hostToken}
         event={event}
+        itemTypes={itemTypes ?? []}
         items={items ?? []}
         categories={categories ?? []}
         parameters={parameters ?? []}
