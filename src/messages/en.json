@@ -230,7 +230,7 @@
             "uniqueness": { "name": "Uniqueness" },
             "typicity": { "name": "Typicity" },
             "authenticity": { "name": "Authenticity" },
-            "wantAgain": { "name": "Would drink again" }
+            "wantAgain": { "name": "Would buy this again" }
           }
         }
       }
@@ -361,8 +361,8 @@
           "name": "Overall taste",
           "parameters": {
             "cutFlavor": { "name": "Flavor" },
-            "wantAgain": { "name": "Would repeat the experience" },
-            "pricePerKg": { "name": "Value per kg" }
+            "wantAgain": { "name": "Would buy this again" },
+            "pricePerKg": { "name": "Value for money" }
           }
         }
       }
@@ -394,7 +394,7 @@
           "name": "Taste & overall experience",
           "parameters": {
             "flavorBalance": { "name": "Flavor balance" },
-            "wantAgain": { "name": "Would repeat the experience" },
+            "wantAgain": { "name": "Would buy this again" },
             "valueForMoney": { "name": "Value for money" }
           }
         }
@@ -417,7 +417,7 @@
         },
         "overall": {
           "name": "Overall",
-          "parameters": { "balance": { "name": "Balance" }, "wantAgain": { "name": "Would drink again" } }
+          "parameters": { "balance": { "name": "Balance" }, "wantAgain": { "name": "Would buy this again" } }
         }
       }
     },
@@ -447,7 +447,7 @@
         },
         "overall": {
           "name": "Overall",
-          "parameters": { "finishLength": { "name": "Finish length" }, "wantAgain": { "name": "Would drink again" } }
+          "parameters": { "finishLength": { "name": "Finish length" }, "wantAgain": { "name": "Would buy this again" } }
         }
       }
     },
@@ -472,8 +472,8 @@
             "flavorIntensity": { "name": "Flavor intensity" },
             "saltinessAcidity": { "name": "Saltiness/acidity" },
             "balance": { "name": "Balance" },
-            "wantAgain": { "name": "Would choose again" },
-            "pricePerKg": { "name": "Value per kg" }
+            "wantAgain": { "name": "Would buy this again" },
+            "pricePerKg": { "name": "Value for money" }
           }
         }
       }
@@ -500,8 +500,8 @@
             "spiceBalance": { "name": "Spice balance" },
             "saltiness": { "name": "Saltiness" },
             "breadQuality": { "name": "Bread/bun quality (if served with)" },
-            "wantAgain": { "name": "Would choose again" },
-            "pricePerKg": { "name": "Value per kg" }
+            "wantAgain": { "name": "Would buy this again" },
+            "pricePerKg": { "name": "Value for money" }
           }
         }
       }
@@ -531,7 +531,7 @@
             "meatFlavor": { "name": "Meat flavor" },
             "bunQuality": { "name": "Bun quality" },
             "sauceToppingsMatch": { "name": "Sauce & toppings pairing" },
-            "wantAgain": { "name": "Would choose again" },
+            "wantAgain": { "name": "Would buy this again" },
             "valueForMoney": { "name": "Value for money" }
           }
         }
@@ -565,7 +565,7 @@
           "parameters": {
             "toppingsSauceBalance": { "name": "Toppings & sauce balance" },
             "flavorIntensity": { "name": "Flavor intensity" },
-            "wantAgain": { "name": "Would choose again" },
+            "wantAgain": { "name": "Would buy this again" },
             "valueForMoney": { "name": "Value for money" }
           }
         }
