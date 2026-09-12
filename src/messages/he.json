@@ -230,7 +230,7 @@
             "uniqueness": { "name": "ייחודיות" },
             "typicity": { "name": "זניות" },
             "authenticity": { "name": "אותנטיות" },
-            "wantAgain": { "name": "ארצה שוב" }
+            "wantAgain": { "name": "הייתי קונה את זה שוב" }
           }
         }
       }
@@ -361,8 +361,8 @@
           "name": "טעם כללי",
           "parameters": {
             "cutFlavor": { "name": "טעם הנתח" },
-            "wantAgain": { "name": "רצון לחזור על החוויה" },
-            "pricePerKg": { "name": "תמורה למחיר לק\"ג" }
+            "wantAgain": { "name": "הייתי קונה את זה שוב" },
+            "pricePerKg": { "name": "תמורה למחיר" }
           }
         }
       }
@@ -394,7 +394,7 @@
           "name": "טעם וחוויה כללית",
           "parameters": {
             "flavorBalance": { "name": "איזון הטעמים" },
-            "wantAgain": { "name": "רצון לחזור על החוויה" },
+            "wantAgain": { "name": "הייתי קונה את זה שוב" },
             "valueForMoney": { "name": "תמורה למחיר" }
           }
         }
@@ -417,7 +417,7 @@
         },
         "overall": {
           "name": "כללי",
-          "parameters": { "balance": { "name": "איזון" }, "wantAgain": { "name": "רצון לשוב אליו" } }
+          "parameters": { "balance": { "name": "איזון" }, "wantAgain": { "name": "הייתי קונה את זה שוב" } }
         }
       }
     },
@@ -447,7 +447,7 @@
         },
         "overall": {
           "name": "כללי",
-          "parameters": { "finishLength": { "name": "אורך סיומת" }, "wantAgain": { "name": "רצון לשוב אליו" } }
+          "parameters": { "finishLength": { "name": "אורך סיומת" }, "wantAgain": { "name": "הייתי קונה את זה שוב" } }
         }
       }
     },
@@ -472,8 +472,8 @@
             "flavorIntensity": { "name": "עוצמת טעם" },
             "saltinessAcidity": { "name": "מליחות/חמיצות" },
             "balance": { "name": "איזון" },
-            "wantAgain": { "name": "רצון לחזור" },
-            "pricePerKg": { "name": "תמורה למחיר לק\"ג" }
+            "wantAgain": { "name": "הייתי קונה את זה שוב" },
+            "pricePerKg": { "name": "תמורה למחיר" }
           }
         }
       }
@@ -500,8 +500,8 @@
             "spiceBalance": { "name": "איזון תבלינים" },
             "saltiness": { "name": "מליחות" },
             "breadQuality": { "name": "איכות הלחם/לחמנייה (אם מוגש עם)" },
-            "wantAgain": { "name": "רצון לחזור" },
-            "pricePerKg": { "name": "תמורה למחיר לק\"ג" }
+            "wantAgain": { "name": "הייתי קונה את זה שוב" },
+            "pricePerKg": { "name": "תמורה למחיר" }
           }
         }
       }
@@ -531,7 +531,7 @@
             "meatFlavor": { "name": "טעם הבשר" },
             "bunQuality": { "name": "איכות הלחמנייה" },
             "sauceToppingsMatch": { "name": "שילוב עם הרוטב/תוספות" },
-            "wantAgain": { "name": "רצון לחזור" },
+            "wantAgain": { "name": "הייתי קונה את זה שוב" },
             "valueForMoney": { "name": "תמורה למחיר" }
           }
         }
@@ -565,7 +565,7 @@
           "parameters": {
             "toppingsSauceBalance": { "name": "איזון תוספות ורוטב" },
             "flavorIntensity": { "name": "עוצמת טעם" },
-            "wantAgain": { "name": "רצון לחזור" },
+            "wantAgain": { "name": "הייתי קונה את זה שוב" },
             "valueForMoney": { "name": "תמורה למחיר" }
           }
         }
