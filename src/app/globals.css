@@ -3,6 +3,18 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* The whole app is built with fixed, explicit light-theme colors
+     (bg-white cards, text-zinc-900/700 headings and labels, etc.) - there
+     is no `dark:` variant anywhere in the codebase. This used to flip
+     --background/--foreground to near-black/near-white whenever the
+     visitor's phone or browser was set to dark mode, which only changed
+     the PAGE background/base text color while every card, button, heading
+     and input kept its hardcoded light-theme color. Net effect: dark
+     backgrounds behind dark headings (text-zinc-900) and white inputs with
+     white inherited text - both unreadable. Since no component actually
+     supports a dark theme, always render the light theme regardless of
+     system preference. */
+  color-scheme: light;
 }
 
 @theme inline {
@@ -10,13 +22,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
