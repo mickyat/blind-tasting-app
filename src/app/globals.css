@@ -3,6 +3,18 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* The whole app is built with fixed, explicit light-theme colors
+     (bg-white cards, text-zinc-900/700 headings and labels, etc.) - there
+     is no `dark:` variant anywhere in the codebase. This used to flip
+     --background/--foreground to near-black/near-white whenever the
+     visitor's phone or browser was set to dark mode, which only changed
+     the PAGE background/base text color while every card, button, heading
+     and input kept its hardcoded light-theme color. Net effect: dark
+     backgrounds behind dark headings (text-zinc-900) and white inputs with
+     white inherited text - both unreadable. Since no component actually
+     supports a dark theme, always render the light theme regardless of
+     system preference. */
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,30 +24,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-}
-
-/* Form fields throughout the app (event title, item names, criteria, etc.)
-   are built with an explicit white background (bg-white) but never set an
-   explicit text color, so they inherit body's `color`. On a phone/browser
-   in dark mode, --foreground becomes near-white, making everything typed
-   into these white inputs invisible. Force a fixed dark, readable color on
-   every form control regardless of system color scheme. */
-input,
-select,
-textarea {
-  color: #171717;
-  color-scheme: light;
 }
 
 /* Brief attention-grabbing shake, replayed by remounting the element (give
