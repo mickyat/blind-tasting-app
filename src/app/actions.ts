@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createPublicClient } from '@/lib/supabase/public'
 import { resolveLocale } from '@/i18n/request'
 import { VISITOR_ID_COOKIE, VISITOR_ID_COOKIE_MAX_AGE } from '@/lib/visitor'
 import type {
@@ -408,6 +409,129 @@ export async function createEvent(input: CreateEventInput) {
       itemId: row.id as string,
       clientKey: itemPlan[idx].item.clientKey,
     })),
+  }
+}
+
+// Accepts either a full participant link (".../e/<token>") or just the bare
+// token/code someone pasted - pulls the token out of a URL if there is one,
+// otherwise assumes the whole trimmed string IS the token.
+function extractShareToken(input: string): string | null {
+  const trimmed = input.trim()
+  if (!trimmed) return null
+  const urlMatch = trimmed.match(/\/e\/([^/?#]+)/)
+  if (urlMatch) return urlMatch[1]
+  return trimmed.replace(/^\/+|\/+$/g, '').split(/[?#]/)[0] || null
+}
+
+// Lets an organizer who received someone else's participant link (not a
+// host/admin link - just the regular ".../e/<token>" link anyone gets) load
+// that event's full question structure into the create-event form as a
+// starting point, so they can run "the same quiz" as their own new event
+// instead of rebuilding every item type / category / parameter by hand. Uses
+// the public (anon-key) client, same as the participant join page
+// (src/app/e/[shareToken]/page.tsx) - only reads data participants can
+// already see, and never touches participants/scores/checklist answers or
+// the source event itself. External criteria are deliberately NOT carried
+// over: they aren't part of the public participant-facing data (see the host
+// dashboard's own separate fetch for those), so there's nothing to copy here
+// without host access to the source event.
+export async function getEventForDuplication(code: string) {
+  try {
+    const token = extractShareToken(code)
+    if (!token) return err('duplicateInvalidLink')
+
+    const supabase = createPublicClient()
+
+    const { data: event, error: eventError } = await supabase
+      .from('event')
+      .select('*')
+      .eq('share_token', token)
+      .maybeSingle()
+    if (eventError) {
+      console.error('getEventForDuplication: event lookup failed', eventError)
+      return err('duplicateFetchFailed', { detail: eventError.message })
+    }
+    if (!event) return err('duplicateEventNotFound')
+
+    const { data: itemTypes, error: itemTypesError } = await supabase
+      .from('item_type')
+      .select('*')
+      .eq('event_id', event.id)
+      .order('sort_order')
+    if (itemTypesError) {
+      console.error('getEventForDuplication: item_type fetch failed', itemTypesError)
+      return err('duplicateFetchFailed', { detail: itemTypesError.message })
+    }
+    if (!itemTypes || itemTypes.length === 0) return err('duplicateEventEmpty')
+
+    const itemTypeIds = itemTypes.map((t) => t.id)
+    const [itemsResult, categoriesResult] = await Promise.all([
+      supabase.from('item').select('*').in('item_type_id', itemTypeIds).order('sort_order'),
+      supabase.from('category').select('*').in('item_type_id', itemTypeIds).order('sort_order'),
+    ])
+    if (itemsResult.error || categoriesResult.error) {
+      console.error(
+        'getEventForDuplication: item/category fetch failed',
+        itemsResult.error,
+        categoriesResult.error
+      )
+      return err('duplicateFetchFailed', {
+        detail: (itemsResult.error ?? categoriesResult.error)?.message ?? 'unknown error',
+      })
+    }
+    const items = itemsResult.data ?? []
+    const categories = categoriesResult.data ?? []
+
+    const categoryIds = categories.map((c) => c.id)
+    const { data: parametersData, error: parametersError } =
+      categoryIds.length > 0
+        ? await supabase.from('parameter').select('*').in('category_id', categoryIds).order('sort_order')
+        : { data: [], error: null }
+    if (parametersError) {
+      console.error('getEventForDuplication: parameter fetch failed', parametersError)
+      return err('duplicateFetchFailed', { detail: parametersError.message })
+    }
+    const parameters = parametersData ?? []
+
+    return {
+      title: event.title as string,
+      theme: event.theme as EventTheme,
+      logoUrl: event.logo_url as string | null,
+      prizeDescription: event.prize_description as string | null,
+      resultsVisibility: event.results_visibility as ResultsVisibility,
+      resultsRevealMode: event.results_reveal_mode as ResultsRevealMode,
+      hideItemIdentity: !!event.hide_item_identity,
+      itemTypes: itemTypes.map((it) => ({
+        name: it.name as string,
+        template: it.template as string | null,
+        items: items
+          .filter((i) => i.item_type_id === it.id)
+          .map((i) => ({
+            label: i.label as string,
+            blindLabel: (i.blind_label as string | null) ?? null,
+          })),
+        categories: categories
+          .filter((c) => c.item_type_id === it.id)
+          .map((c) => ({
+            name: c.name as string,
+            weight: Number(c.weight),
+            parameters: parameters
+              .filter((p) => p.category_id === c.id)
+              .map((p) => ({
+                name: p.name as string,
+                weight: Number(p.weight),
+                kind: p.kind as ParameterKind,
+                scaleMin: p.scale_min as number | null,
+                scaleMax: p.scale_max as number | null,
+                options: (p.options as string[] | null) ?? [],
+                multiSelect: !!p.multi_select,
+              })),
+          })),
+      })),
+    }
+  } catch (e) {
+    console.error('getEventForDuplication: unexpected error', e)
+    return err('duplicateFetchFailed', { detail: e instanceof Error ? e.message : 'unknown error' })
   }
 }
 

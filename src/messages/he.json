@@ -41,6 +41,10 @@
     "parameterInsertFailed": "שגיאה בהוספת השאלות, נסה שוב. פרטי השגיאה: {detail}",
     "criterionInsertFailed": "שגיאה בהוספת הקריטריונים החיצוניים, נסה שוב. פרטי השגיאה: {detail}",
     "externalValueInsertFailed": "שגיאה בהוספת ערכי הקריטריונים, נסה שוב. פרטי השגיאה: {detail}",
+    "duplicateInvalidLink": "צריך להדביק קישור או קוד תקין",
+    "duplicateEventNotFound": "לא נמצא שאלון עם הקישור הזה. ודא שהעתקת אותו נכון",
+    "duplicateEventEmpty": "לא נמצא תוכן לשכפול בשאלון הזה",
+    "duplicateFetchFailed": "שגיאה בטעינת השאלון לשכפול, נסה שוב. פרטי השגיאה: {detail}",
     "invalidHostLink": "קישור ניהול לא תקין",
     "openResultsFailed": "שגיאה בפתיחת התוצאות",
     "itemNotFound": "הפריט לא נמצא",
@@ -95,7 +99,15 @@
       "prompt": "איך תרצה להתחיל?",
       "readyBadge": "תבנית מוכנה",
       "startFromScratch": "+ התחל מאפס",
-      "backToTemplates": "← חזרה לבחירת תבנית"
+      "backToTemplates": "← חזרה לבחירת תבנית",
+      "duplicate": {
+        "button": "שכפל שאלון קיים",
+        "buttonHint": "מישהו שלח לך קישור? העתק אותו כמו שהוא",
+        "prompt": "הדבק כאן את הקישור (או הקוד) של השאלון שקיבלת. נטען את כל סוגי הפריטים, הפריטים, הקטגוריות והשאלות בדיוק כמו שהם - אתה תוכל לערוך הכל לפני שיוצרים את האירוע שלך",
+        "placeholder": "לדוגמה: https://.../e/AbCdEfGh",
+        "load": "טען שאלון",
+        "loading": "טוען..."
+      }
     },
     "title": {
       "label": "כותרת האירוע",

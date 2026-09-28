@@ -41,6 +41,10 @@
     "parameterInsertFailed": "Error adding the questions, please try again. Details: {detail}",
     "criterionInsertFailed": "Error adding the external criteria, please try again. Details: {detail}",
     "externalValueInsertFailed": "Error adding the criteria values, please try again. Details: {detail}",
+    "duplicateInvalidLink": "Please paste a valid link or code",
+    "duplicateEventNotFound": "No survey was found for that link. Make sure you copied it correctly",
+    "duplicateEventEmpty": "That survey has no content to duplicate",
+    "duplicateFetchFailed": "Error loading the survey to duplicate, please try again. Details: {detail}",
     "invalidHostLink": "Invalid management link",
     "openResultsFailed": "Error opening the results",
     "itemNotFound": "Item not found",
@@ -95,7 +99,15 @@
       "prompt": "How would you like to start?",
       "readyBadge": "Ready-made template",
       "startFromScratch": "+ Start from scratch",
-      "backToTemplates": "← Back to templates"
+      "backToTemplates": "← Back to templates",
+      "duplicate": {
+        "button": "Duplicate an existing survey",
+        "buttonHint": "Someone sent you a link? Paste it as-is",
+        "prompt": "Paste the link (or code) of the survey you received here. We'll load all its item types, items, categories and questions exactly as they are - you can edit everything before creating your own event",
+        "placeholder": "e.g. https://.../e/AbCdEfGh",
+        "load": "Load survey",
+        "loading": "Loading..."
+      }
     },
     "title": {
       "label": "Event title",

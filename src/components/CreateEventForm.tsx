@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { createEvent, uploadEventLogo, uploadItemPhoto } from '@/app/actions'
+import { createEvent, getEventForDuplication, uploadEventLogo, uploadItemPhoto } from '@/app/actions'
 import type {
   EventTheme,
   ExternalCriterionCalcType,
@@ -226,6 +226,16 @@ export default function CreateEventForm() {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
+  // "Duplicate an existing survey" - lets the organizer paste a link someone
+  // else sent them and load that event's structure as a starting point for
+  // their own new event, instead of rebuilding it by hand. Lives entirely in
+  // the 'template' step, as an alternative to chooseTemplate/startFromScratch
+  // below (see handleDuplicateLoad).
+  const [duplicateOpen, setDuplicateOpen] = useState(false)
+  const [duplicateCode, setDuplicateCode] = useState('')
+  const [duplicateLoading, setDuplicateLoading] = useState(false)
+  const [duplicateError, setDuplicateError] = useState<string | null>(null)
+
   // Same two-hidden-inputs-behind-one-button pattern as HostDashboard's
   // item photo picker (see its comment for why) - keyed by "ti-i" since
   // items are nested per item type here.
@@ -245,6 +255,62 @@ export default function CreateEventForm() {
   function startFromScratch() {
     setItemTypes([emptyItemType()])
     setTheme('default')
+    setStep('form')
+  }
+
+  // Loads another event's structure (via getEventForDuplication) into this
+  // form's own draft state, exactly like chooseTemplate does for a built-in
+  // template - new clientKeys per item since these are now fresh drafts, no
+  // pending photos (photos aren't carried over - the organizer can add their
+  // own from the form, same as any other new event).
+  async function handleDuplicateLoad() {
+    setDuplicateError(null)
+    setDuplicateLoading(true)
+    const result = await getEventForDuplication(duplicateCode)
+    setDuplicateLoading(false)
+    if ('errorKey' in result) {
+      setDuplicateError(tRoot(`errors.${result.errorKey}`, result.errorParams))
+      return
+    }
+
+    setTitle(result.title)
+    setTheme(result.theme)
+    setLogoUrl(result.logoUrl)
+    setPrizeDescription(result.prizeDescription ?? '')
+    setVisibility(result.resultsVisibility)
+    setRevealMode(result.resultsRevealMode)
+    setRevealItemIdentity(!result.hideItemIdentity)
+    setItemTypes(
+      result.itemTypes.map((t) => ({
+        name: t.name,
+        template: t.template,
+        externalCriteria: [],
+        items: t.items.map((it) => ({
+          label: it.label,
+          externalValues: {},
+          clientKey: crypto.randomUUID(),
+          photoFile: null,
+          photoPreviewUrl: null,
+          blindLabel: it.blindLabel ?? '',
+        })),
+        categories: t.categories.map((c) => ({
+          name: c.name,
+          weight: c.weight,
+          parameters: c.parameters.map((p) => ({
+            name: p.name,
+            weight: p.weight,
+            kind: p.kind,
+            scaleMin: p.scaleMin ?? 1,
+            scaleMax: p.scaleMax ?? 5,
+            options: p.options,
+            multiSelect: p.multiSelect,
+          })),
+        })),
+      }))
+    )
+
+    setDuplicateOpen(false)
+    setDuplicateCode('')
     setStep('form')
   }
 
@@ -587,6 +653,41 @@ export default function CreateEventForm() {
   }
 
   if (step === 'template') {
+    if (duplicateOpen) {
+      return (
+        <div className="flex flex-col gap-4">
+          <button
+            type="button"
+            onClick={() => {
+              setDuplicateOpen(false)
+              setDuplicateError(null)
+            }}
+            className="self-start rounded-lg border-2 border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700"
+          >
+            {t('template.backToTemplates')}
+          </button>
+          <p className="text-sm text-zinc-600">{t('template.duplicate.prompt')}</p>
+          <input
+            value={duplicateCode}
+            onChange={(e) => setDuplicateCode(e.target.value)}
+            placeholder={t('template.duplicate.placeholder')}
+            dir="ltr"
+            className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
+          />
+          {duplicateError && (
+            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{duplicateError}</p>
+          )}
+          <button
+            type="button"
+            onClick={handleDuplicateLoad}
+            disabled={duplicateLoading || !duplicateCode.trim()}
+            className={PRIMARY_BUTTON_CLASS}
+          >
+            {duplicateLoading ? t('template.duplicate.loading') : t('template.duplicate.load')}
+          </button>
+        </div>
+      )
+    }
     return (
       <div className="flex flex-col gap-4">
         <p className="text-center text-sm text-zinc-500">{t('template.prompt')}</p>
@@ -644,6 +745,15 @@ export default function CreateEventForm() {
           >
             <span className="text-4xl font-bold text-zinc-900">+</span>
             <span className="text-base font-bold text-zinc-900">{t('template.startFromScratch')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setDuplicateOpen(true)}
+            className="col-span-2 flex h-28 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-zinc-400 bg-white text-center"
+          >
+            <span className="text-3xl">📋</span>
+            <span className="text-base font-bold text-zinc-900">{t('template.duplicate.button')}</span>
+            <span className="text-xs font-normal text-zinc-500">{t('template.duplicate.buttonHint')}</span>
           </button>
         </div>
       </div>
