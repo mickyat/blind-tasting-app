@@ -202,7 +202,13 @@ export async function createEvent(input: CreateEventInput) {
     .single()
 
   if (eventError || !event) {
-    return err('eventCreationFailed')
+    // Surfaced to the organizer via {detail} in the errors.eventCreationFailed
+    // string (see he/en.json) - without this, every DB-level failure here
+    // (bad enum value, RLS, constraint, etc.) looked identical and gave the
+    // organizer nothing to act on. Also logged server-side for the same
+    // reason grep-ability in Vercel's function logs.
+    console.error('createEvent: event insert failed', eventError)
+    return err('eventCreationFailed', { detail: eventError?.message ?? 'unknown error' })
   }
 
   const rollback = async () => {
@@ -216,8 +222,9 @@ export async function createEvent(input: CreateEventInput) {
     .single()
 
   if (adminError || !admin) {
+    console.error('createEvent: event_admin insert failed', adminError)
     await rollback()
-    return err('eventCreationFailed')
+    return err('eventCreationFailed', { detail: adminError?.message ?? 'unknown error' })
   }
 
   const { data: itemTypeRows, error: itemTypeError } = await supabase
@@ -233,8 +240,9 @@ export async function createEvent(input: CreateEventInput) {
     .select()
 
   if (itemTypeError || !itemTypeRows) {
+    console.error('createEvent: item_type insert failed', itemTypeError)
     await rollback()
-    return err('itemTypeInsertFailed')
+    return err('itemTypeInsertFailed', { detail: itemTypeError?.message ?? 'unknown error' })
   }
 
   const itemPlan = itemTypes.flatMap((t, i) => t.items.map((item) => ({ typeIndex: i, item })))
@@ -256,8 +264,9 @@ export async function createEvent(input: CreateEventInput) {
     )
     .select()
   if (itemsError || !itemRows) {
+    console.error('createEvent: item insert failed', itemsError)
     await rollback()
-    return err('itemInsertFailed')
+    return err('itemInsertFailed', { detail: itemsError?.message ?? 'unknown error' })
   }
 
   const categoryPlan = itemTypes.flatMap((t, i) => t.categories.map((c) => ({ typeIndex: i, c })))
@@ -274,8 +283,9 @@ export async function createEvent(input: CreateEventInput) {
     .select()
 
   if (categoriesError || !categoryRows) {
+    console.error('createEvent: category insert failed', categoriesError)
     await rollback()
-    return err('categoryInsertFailed')
+    return err('categoryInsertFailed', { detail: categoriesError?.message ?? 'unknown error' })
   }
 
   const parameterPlan = categoryPlan.flatMap(({ c }, ci) => c.parameters.map((p) => ({ ci, p })))
@@ -293,8 +303,9 @@ export async function createEvent(input: CreateEventInput) {
     }))
   )
   if (paramsError) {
+    console.error('createEvent: parameter insert failed', paramsError)
     await rollback()
-    return err('parameterInsertFailed')
+    return err('parameterInsertFailed', { detail: paramsError?.message ?? 'unknown error' })
   }
 
   const criterionPlan = itemTypes.flatMap((t, i) =>
@@ -322,8 +333,9 @@ export async function createEvent(input: CreateEventInput) {
       .select()
 
     if (criterionError || !criterionRows) {
+      console.error('createEvent: external_criterion insert failed', criterionError)
       await rollback()
-      return err('criterionInsertFailed')
+      return err('criterionInsertFailed', { detail: criterionError?.message ?? 'unknown error' })
     }
 
     criterionPlan.forEach((entry, idx) => {
@@ -344,8 +356,9 @@ export async function createEvent(input: CreateEventInput) {
   if (externalValueRows.length > 0) {
     const { error: valuesError } = await supabase.from('item_external_value').insert(externalValueRows)
     if (valuesError) {
+      console.error('createEvent: item_external_value insert failed', valuesError)
       await rollback()
-      return err('externalValueInsertFailed')
+      return err('externalValueInsertFailed', { detail: valuesError?.message ?? 'unknown error' })
     }
   }
 
