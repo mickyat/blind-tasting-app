@@ -103,7 +103,8 @@
       "duplicate": {
         "button": "Duplicate an existing survey",
         "buttonHint": "Someone sent you a link? Paste it as-is",
-        "prompt": "Paste the link (or code) of the survey you received here. We'll load all its item types, items, categories and questions exactly as they are - you can edit everything before creating your own event",
+        "label": "To duplicate, paste the link to the survey you'd like to copy here",
+        "hint": "We'll load all its item types, items, categories and questions exactly as they are - you can edit everything before creating your own event",
         "placeholder": "e.g. https://.../e/AbCdEfGh",
         "load": "Load survey",
         "loading": "Loading..."

@@ -666,14 +666,18 @@ export default function CreateEventForm() {
           >
             {t('template.backToTemplates')}
           </button>
-          <p className="text-sm text-zinc-600">{t('template.duplicate.prompt')}</p>
+          <label htmlFor="duplicateCode" className="text-sm font-medium text-zinc-700">
+            {t('template.duplicate.label')}
+          </label>
           <input
+            id="duplicateCode"
             value={duplicateCode}
             onChange={(e) => setDuplicateCode(e.target.value)}
             placeholder={t('template.duplicate.placeholder')}
             dir="ltr"
             className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base focus:border-zinc-500 focus:outline-none"
           />
+          <p className="text-xs text-zinc-400">{t('template.duplicate.hint')}</p>
           {duplicateError && (
             <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{duplicateError}</p>
           )}
