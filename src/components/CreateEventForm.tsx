@@ -742,19 +742,30 @@ export default function CreateEventForm() {
               </button>
             </div>
 
-            <div className="flex flex-wrap gap-1.5">
-              <span className="self-center text-xs text-zinc-500">{t('itemTypes.fillFromTemplate')}</span>
-              {EVENT_TEMPLATES.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => applyTemplateToItemType(ti, tpl)}
-                  className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600"
-                >
-                  {templateLabel(tRoot, tpl.id)}
-                </button>
-              ))}
-            </div>
+            {/* Only offer the tasting-template quick-fill buttons (wine/meat/
+                beer/...) when the event itself started from one of those
+                food templates - useful there for a second item type (e.g.
+                "also add meat alongside wine"). For an event that started
+                from scratch or from the general-vote template (theme stays
+                'default' for both, see themeForTemplate above), every one
+                of those buttons is irrelevant clutter for whatever custom
+                thing the organizer is actually building (a poll, a
+                competition, etc.), so hide the whole row. */}
+            {theme !== 'default' && (
+              <div className="flex flex-wrap gap-1.5">
+                <span className="self-center text-xs text-zinc-500">{t('itemTypes.fillFromTemplate')}</span>
+                {EVENT_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => applyTemplateToItemType(ti, tpl)}
+                    className="rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600"
+                  >
+                    {templateLabel(tRoot, tpl.id)}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <h3 className="text-xs font-medium text-zinc-500">
